@@ -1,0 +1,139 @@
+/* Pop-up de confirmação de email (login.html) */
+body.pagina-login .modal-confirmar {
+  max-width: 420px;
+  padding: 36px 32px 28px;
+  text-align: center;
+  animation: confirmarEntrada 0.25s ease-out;
+}
+
+@keyframes confirmarEntrada {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+body.pagina-login .confirmar-icone {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: #e8eefc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.pagina-login .confirmar-icone svg {
+  width: 36px;
+  height: 36px;
+  stroke: #3f5eab;
+}
+
+body.pagina-login .modal-confirmar h2 {
+  margin-bottom: 8px;
+}
+
+body.pagina-login .modal-confirmar .modal-texto {
+  margin: 0 0 24px;
+}
+
+body.pagina-login .modal-confirmar .modal-texto strong {
+  color: #0a1a3c;
+  word-break: break-all;
+}
+
+body.pagina-login .form-confirmar {
+  display: flex;
+  flex-direction: column;
+}
+
+body.pagina-login .campo-email-confirma {
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+body.pagina-login .campo-email-confirma[hidden] {
+  display: none;
+}
+
+body.pagina-login .campo-email-confirma label {
+  display: block;
+  color: #0a1a3c;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+body.pagina-login .campo-email-confirma input {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+  outline: none;
+}
+
+body.pagina-login .campo-email-confirma input:focus {
+  border-color: #3f5eab;
+  box-shadow: 0 0 0 3px rgba(63, 94, 171, 0.2);
+}
+
+body.pagina-login .codigo-caixas {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+body.pagina-login .codigo-digito {
+  width: 46px;
+  height: 56px;
+  border: 2px solid #d0d7e6;
+  border-radius: 10px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #0a1a3c;
+  text-align: center;
+  background: #f7f9fd;
+  box-sizing: border-box;
+  outline: none;
+  padding: 0;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+body.pagina-login .codigo-digito:focus {
+  border-color: #3f5eab;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(63, 94, 171, 0.2);
+}
+
+body.pagina-login .codigo-digito.preenchido {
+  border-color: #3f5eab;
+  background: #fff;
+}
+
+body.pagina-login .confirmar-validade {
+  color: #888;
+  font-size: 13px;
+  margin: 6px 0 4px;
+}
+
+body.pagina-login .form-confirmar .erro-campo {
+  text-align: center;
+  min-height: 0;
+}
+
+body.pagina-login .form-confirmar .btn-enviar {
+  width: 100%;
+  margin-top: 14px;
+}
+
+body.pagina-login .form-confirmar .btn-enviar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 420px) {
+  body.pagina-login .modal-confirmar { padding: 28px 18px 22px; }
+  body.pagina-login .codigo-caixas { gap: 6px; }
+  body.pagina-login .codigo-digito { width: 40px; height: 50px; font-size: 22px; }
+}

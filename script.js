@@ -1635,15 +1635,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 tipoUsuario: tiposUsuario[papelSelecionado.value]
             });
 
-            mostrarMensagem(erroCadastro, 'Cadastro realizado! Enviamos um código de confirmação para o seu email.', 'sucesso');
             campoEmail.value = email.toLowerCase();
-
-            setTimeout(function () {
-                overlayCadastro.classList.remove('ativo');
-                esconderMensagem(erroCadastro);
-                formCadastro.reset();
-                abrirConfirmacao(email.toLowerCase());
-            }, 1500);
+            overlayCadastro.classList.remove('ativo');
+            esconderMensagem(erroCadastro);
+            formCadastro.reset();
+            abrirConfirmacao(email.toLowerCase());
         } catch (erro) {
             mostrarMensagem(erroCadastro, erro.message, 'erro');
         } finally {
@@ -1658,46 +1654,114 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlayConfirmar = document.querySelector('#overlay-confirmar');
     const formConfirmar = document.querySelector('.form-confirmar');
     const campoConfirmaEmail = document.querySelector('#confirma-email');
-    const campoCodigo = document.querySelector('#codigo-confirmacao');
+    const linhaEmailConfirma = document.querySelector('#linha-email-confirma');
+    const textoConfirmar = document.querySelector('#texto-confirmar');
     const erroConfirmar = document.querySelector('#erro-confirmar');
+    const digitos = Array.from(document.querySelectorAll('.codigo-digito'));
 
-    function abrirConfirmacao(email) {
-        if (email) campoConfirmaEmail.value = email;
-        esconderMensagem(erroConfirmar);
-        overlayConfirmar.classList.add('ativo');
+    function codigoDigitado() {
+        return digitos.map(function (d) { return d.value; }).join('');
     }
 
-    document.querySelector('#link-confirmar').addEventListener('click', function () {
-        abrirConfirmacao(campoEmail.value.trim());
-    });
+    function limparDigitos() {
+        digitos.forEach(function (d) {
+            d.value = '';
+            d.classList.remove('preenchido');
+        });
+    }
 
-    document.querySelector('#cancelar-confirmar').addEventListener('click', function () {
+    function abrirConfirmacao(email) {
+        limparDigitos();
+        esconderMensagem(erroConfirmar);
+
+        if (email) {
+            campoConfirmaEmail.value = email;
+            linhaEmailConfirma.hidden = true;
+            textoConfirmar.innerHTML = 'Enviamos um código de 6 números para <strong></strong>.';
+            textoConfirmar.querySelector('strong').textContent = email;
+        } else {
+            linhaEmailConfirma.hidden = false;
+            textoConfirmar.textContent = 'Digite o seu email e o código de 6 números que enviamos para você.';
+        }
+
+        overlayConfirmar.classList.add('ativo');
+        setTimeout(function () {
+            (email ? digitos[0] : campoConfirmaEmail).focus();
+        }, 50);
+    }
+
+    function fecharConfirmacao() {
         overlayConfirmar.classList.remove('ativo');
         esconderMensagem(erroConfirmar);
+    }
+
+    digitos.forEach(function (campo, i) {
+        campo.addEventListener('input', function () {
+            campo.value = campo.value.replace(/\D/g, '').slice(-1);
+            campo.classList.toggle('preenchido', campo.value !== '');
+            if (campo.value && i < digitos.length - 1) digitos[i + 1].focus();
+        });
+
+        campo.addEventListener('keydown', function (evento) {
+            if (evento.key === 'Backspace' && !campo.value && i > 0) {
+                digitos[i - 1].focus();
+            }
+        });
+
+        campo.addEventListener('paste', function (evento) {
+            evento.preventDefault();
+            const colado = (evento.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, digitos.length);
+            colado.split('').forEach(function (numero, k) {
+                digitos[k].value = numero;
+                digitos[k].classList.add('preenchido');
+            });
+            if (colado.length) digitos[Math.min(colado.length, digitos.length - 1)].focus();
+        });
     });
+
+    document.querySelector('#link-confirmar').addEventListener('click', function () {
+        abrirConfirmacao(ehEmailValido(campoEmail.value.trim()) ? campoEmail.value.trim() : '');
+    });
+
+    document.querySelector('#cancelar-confirmar').addEventListener('click', fecharConfirmacao);
 
     formConfirmar.addEventListener('submit', async function (evento) {
         evento.preventDefault();
         esconderMensagem(erroConfirmar);
 
+        const emailConfirmar = campoConfirmaEmail.value.trim();
+        const codigo = codigoDigitado();
+
+        if (!ehEmailValido(emailConfirmar)) {
+            mostrarMensagem(erroConfirmar, 'Digite um email válido.', 'erro');
+            return;
+        }
+
+        if (codigo.length !== digitos.length) {
+            mostrarMensagem(erroConfirmar, 'Digite os 6 números do código.', 'erro');
+            return;
+        }
+
         const botao = formConfirmar.querySelector('button[type="submit"]');
         if (botao) botao.disabled = true;
 
         try {
-            const r = await api.confirmarEmail(campoConfirmaEmail.value.trim(), campoCodigo.value.trim());
+            const r = await api.confirmarEmail(emailConfirmar, codigo);
             mostrarMensagem(erroConfirmar, (r && r.mensagem) || 'Email confirmado! Agora é só fazer login.', 'sucesso');
-            campoEmail.value = campoConfirmaEmail.value.trim();
+            campoEmail.value = emailConfirmar;
 
             setTimeout(function () {
-                overlayConfirmar.classList.remove('ativo');
-                esconderMensagem(erroConfirmar);
-                formConfirmar.reset();
+                fecharConfirmacao();
+                limparDigitos();
+                campoSenha.focus();
             }, 1800);
         } catch (erro) {
             mostrarMensagem(erroConfirmar, erro.message, 'erro');
-        } finally {
             if (botao) botao.disabled = false;
+            return;
         }
+
+        if (botao) botao.disabled = false;
     });
 
     /*  TELEFONE */
