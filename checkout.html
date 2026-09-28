@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento - Medica+</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="pagina-checkout">
+
+    <main class="checkout">
+
+        <a href="index.html" class="voltar">← Voltar</a>
+
+        <h1>Finalizar assinatura</h1>
+
+        <section class="resumo" aria-live="polite">
+            <div>
+                <p class="resumo-label">Plano selecionado</p>
+                <p class="resumo-plano" id="resumo-plano">—</p>
+            </div>
+            <p class="resumo-preco" id="resumo-preco">R$ 0,00</p>
+        </section>
+
+        <div class="metodos" role="tablist" aria-label="Forma de pagamento">
+            <button type="button" class="metodo ativo" id="btn-cartao" role="tab" aria-selected="true">💳 Cartão</button>
+            <button type="button" class="metodo" id="btn-pix" role="tab" aria-selected="false">⚡ Pix</button>
+        </div>
+
+        <!-- ==================== CARTÃO ==================== -->
+        <form class="form-pagamento" id="form-cartao">
+
+            <label for="nome-cartao">Nome no cartão</label>
+            <input type="text" id="nome-cartao" placeholder="Como está impresso no cartão" autocomplete="cc-name">
+
+            <label for="numero-cartao">Número do cartão</label>
+            <input type="text" id="numero-cartao" placeholder="0000 0000 0000 0000" inputmode="numeric"
+                autocomplete="cc-number">
+
+            <div class="linha-dupla">
+                <div>
+                    <label for="validade">Validade</label>
+                    <input type="text" id="validade" placeholder="MM/AA" inputmode="numeric" autocomplete="cc-exp">
+                </div>
+                <div>
+                    <label for="cvv">CVV</label>
+                    <input type="text" id="cvv" placeholder="123" inputmode="numeric" autocomplete="cc-csc">
+                </div>
+            </div>
+
+            <p class="mensagem" id="msg-cartao"></p>
+
+            <button type="submit" class="btn-pagar" id="btn-pagar-cartao">Pagar <span id="valor-botao"></span></button>
+        </form>
+
+        <!-- ==================== PIX ==================== -->
+        <div class="form-pagamento escondido" id="form-pix">
+
+            <div class="pix-qr" aria-hidden="true">▦</div>
+
+            <p class="pix-texto">Escaneie o QR Code no app do seu banco ou copie o código Pix:</p>
+
+            <div class="pix-codigo">
+                <input type="text" id="codigo-pix" readonly
+                    value="URUBUDOPIXPAGUEAGORA!">
+                <button type="button" id="btn-copiar-pix">Copiar</button>
+            </div>
+
+            <p class="mensagem" id="msg-pix"></p>
+
+            <button type="button" class="btn-pagar" id="btn-confirmar-pix">Já paguei</button>
+        </div>
+
+    </main>
+
+
+    <div class="overlay-sucesso" id="overlay-sucesso">
+        <div class="caixa-sucesso">
+            <div class="check">✓</div>
+            <h2>Pagamento aprovado!</h2>
+            <p id="sucesso-texto">Sua assinatura foi ativada com sucesso.</p>
+            <a href="index.html" class="btn-pagar">Voltar para o início</a>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>

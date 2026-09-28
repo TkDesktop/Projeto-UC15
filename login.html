@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Login Medica+</title>
+</head>
+
+<body class="pagina-login">
+
+    <main class="hero">
+
+        <a class="X" href="index.html" aria-label="Voltar para a home">×</a>
+
+        <section class="login-card">
+
+            <img src="img/img-login.png" alt="Logo Medica+">
+
+            <h1>Bem-vindo(a) de volta</h1>
+            <p class="login-subtitulo">Entre na sua conta para acompanhar sua saúde.</p>
+
+            <form class="login-form">
+
+                <div class="campo-login">
+                    <label for="email-login">Email</label>
+                    <input type="email" id="email-login" placeholder="exemplo@gmail.com" autocomplete="email" required>
+                    <p class="erro-campo" id="erro-email"></p>
+                </div>
+
+                <div class="campo-login">
+                    <label for="senha-login">Senha</label>
+                    <div class="senha-container">
+                        <input type="password" id="senha-login" placeholder="Sua senha" autocomplete="current-password"
+                            required>
+                    </div>
+                </div>
+
+                <div class="linha-opcoes">
+                    <label>
+                        <input type="checkbox" id="lembrar-senha"> Lembrar senha
+                    </label>
+                    <a href="#" class="esqueceu">Esqueceu sua senha?</a>
+                </div>
+
+                <p class="erro-campo" id="erro-login"></p>
+
+                <button type="submit" class="btn-login">Entrar</button>
+
+            </form>
+
+            <p class="cadastro">Ainda não tem cadastro? <strong>cadastre-se</strong></p>
+
+        </section>
+
+    </main>
+
+    <div class="overlay" id="overlay-esqueci">
+        <div class="modal-box">
+
+            <h2>Esqueci minha senha</h2>
+
+            <p class="modal-texto">
+                Para recuperar sua senha, informe seu cpf ou email cadastrado
+                na sua conta e lhe enviaremos um link com as instruções
+            </p>
+
+            <form class="form-esqueci">
+                <label for="cpf-email">Cpf ou email</label>
+                <input type="text" id="cpf-email" placeholder="">
+
+                <p class="erro-campo" id="erro-esqueci"></p>
+
+                <button type="submit" class="btn-enviar">ENVIAR</button>
+                <button type="button" class="btn-cancelar">Cancelar</button>
+            </form>
+
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay-cadastro">
+        <div class="modal-box modal-cadastro">
+
+            <h2>Cadastre-se</h2>
+
+            <form class="form-cadastro">
+
+                <label for="nome">Nome completo <span class="obrigatorio">*</span></label>
+                <input type="text" id="nome" required>
+
+                <label for="cpf">Cpf <span class="obrigatorio">*</span></label>
+                <input type="text" id="cpf" maxlength="11" inputmode="numeric" required>
+                <p class="erro-campo" id="erro-cpf"></p>
+
+                <label for="telefone-cadastro">Telefone <span class="obrigatorio">*</span></label>
+                <input type="text" id="telefone-cadastro" maxlength="15" inputmode="numeric"
+                    placeholder="(00) 00000-0000" required>
+                <p class="erro-campo" id="erro-telefone-cadastro"></p>
+
+                <div class="opcoes-papel">
+                    <label>
+                        <input type="radio" name="papel" value="cuidador" required> Cuidador
+                    </label>
+                    <label>
+                        <input type="radio" name="papel" value="paciente"> Paciente
+                    </label>
+                    <label>
+                        <input type="radio" name="papel" value="parente"> Parente
+                    </label>
+                </div>
+
+                <label for="email-cadastro">Email <span class="obrigatorio">*</span></label>
+                <input type="email" id="email-cadastro" required>
+                <p class="erro-campo" id="erro-email-cadastro"></p>
+
+                <label for="senha-cadastro">Crie uma senha <span class="obrigatorio">*</span></label>
+                <input type="password" id="senha-cadastro" required>
+
+                <label for="confirma-senha">Confirme sua senha <span class="obrigatorio">*</span></label>
+                <input type="password" id="confirma-senha" required>
+
+                <p class="erro-campo" id="erro-cadastro"></p>
+
+                <button type="submit" class="btn-enviar">Cadastrar</button>
+                <button type="button" class="btn-cancelar" id="cancelar-cadastro">Cancelar</button>
+
+            </form>
+
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay-confirmar">
+        <div class="modal-box">
+            <h2>Confirmar email</h2>
+            <p class="modal-texto">Digite o código que enviamos para o seu email.</p>
+            <form class="form-confirmar">
+                <label for="confirma-email">Email</label>
+                <input type="email" id="confirma-email" required>
+                <label for="codigo-confirmacao">Código</label>
+                <input type="text" id="codigo-confirmacao" inputmode="numeric" autocomplete="one-time-code" required>
+                <p class="erro-campo" id="erro-confirmar"></p>
+                <button type="submit" class="btn-enviar">CONFIRMAR</button>
+                <button type="button" class="btn-cancelar" id="cancelar-confirmar">Cancelar</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

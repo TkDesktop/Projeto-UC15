@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medica+ - Painel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="pagina-logado">
+
+    <nav>
+        <div class="nav-container">
+            <img src="img/logo.png" alt="Logo Medica+">
+
+            <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false"
+                aria-controls="menuNav" aria-label="Abrir menu de navegação">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <ul id="menuNav">
+                <li><a href="logado.html" class="ativo">Início</a></li>
+                <li><a href="#monitoramento">Monitoramento</a></li>
+                <li><a href="#contatos">Contatos</a></li>
+                <li><a href="#suporte">Suporte Prioritário</a></li>
+                <li><a href="#" id="linkPerfilNav">Perfil</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+
+        <section class="boas-vindas">
+
+            <div class="boas-vindas-text">
+                <h1 id="saudacaoNome">Olá! </h1>
+
+                <p>
+                    Que bom te ver! Cuide todos os dias da sua saúde
+                    e da saúde de quem você ama.
+                </p>
+            </div>
+
+            <div class="btns-conta">
+                <button type="button" class="Ver-perfil" id="btnVerPerfil">Ver meu perfil </button>
+                <button type="button" class="Sair-conta" id="sairDaConta">Sair da conta </button>
+            </div>
+
+        </section>
+
+        <div class="cards">
+
+            <article class="card-picos" data-scroll-to="#monitoramento">
+                <h3>Picos de pressão</h3>
+
+                <ul class="card-home">
+                    <li class="pico-alto">
+                        <span> 12/05/2026 11:30</span>
+                        <p class="tag-alto">Pico de pressão alta</p>
+                        <p class="valor">160/100 mmHg</p>
+                    </li>
+                    <li class="pico-baixo">
+                        <span> 14/05/2026 11:34</span>
+                        <p class="tag-baixo">Pico de pressão baixa</p>
+                        <p class="valor">70/40 mmHg</p>
+                    </li>
+                </ul>
+            </article>
+
+            <article class="card-contatos" data-scroll-to="#contatos">
+                <h3>Contatos</h3>
+
+                <ul class="lista-contatos">
+                    <li><button type="button" class="btn-contato">Ana (Filha)</button></li>
+                    <li><button type="button" class="btn-contato">Carlos (cuidador)</button></li>
+                </ul>
+            </article>
+
+            <article class="card-suporte" data-scroll-to="#suporte">
+                <h3>Suporte prioritário</h3>
+
+                <p>A próxima visita será em:</p>
+                <p class="proxima-visita">
+                    <span class="js-visita-data">02/06/2026</span>
+                    <span class="js-visita-hora">10:00</span>
+                </p>
+            </article>
+
+        </div>
+
+        <section class="monitoramento" id="monitoramento">
+
+            <header>
+                <h2>MONITORAMENTO</h2>
+                <p>Picos de Pressão</p>
+            </header>
+
+            <form class="filtros" id="filtrosForm">
+                <div class="filtro">
+                    <label for="periodoInicio"> Período</label>
+                    <input type="date" id="periodoInicio" name="inicio" value="2026-05-10">
+                    <span>–</span>
+                    <input type="date" id="periodoFim" name="fim" value="2026-05-16">
+                </div>
+
+                <p class="filtro-info"> Última atualização: <strong>16/05/2026 12:00</strong></p>
+            </form>
+
+            <div class="chart-card">
+
+                <div class="legenda">
+                    <div class="legenda-item legenda-alto">
+                        <span>▲</span>
+                        <div>
+                            <h4>Muito alta</h4>
+                            <p>Risco de hipertensão</p>
+                        </div>
+                        <p class="faixa">&gt; 140 mmHg</p>
+                    </div>
+
+                    <div class="legenda-item legenda-normal">
+                        <span>✔</span>
+                        <div>
+                            <h4>Normal</h4>
+                            <p>Faixa ideal</p>
+                        </div>
+                        <p class="faixa">90–120 mmHg</p>
+                    </div>
+
+                    <div class="legenda-item legenda-baixo">
+                        <span>▼</span>
+                        <div>
+                            <h4>Muito baixa</h4>
+                            <p>Risco de hipotensão</p>
+                        </div>
+                        <p class="faixa">&lt; 60 mmHg</p>
+                    </div>
+                </div>
+
+                <canvas id="pressaoChart"
+                    aria-label="Gráfico da variação da pressão arterial de Maria"
+                    role="img"></canvas>
+
+                <ul class="badges">
+                    <li class="badge badge-alto">
+                        <span>01/05/2026 11:58</span>
+                        <p>Pico de pressão alta</p>
+                        <strong>160/100 mmHg</strong>
+                    </li>
+                    <li class="badge badge-baixo">
+                        <span>14/05/2026 15:34</span>
+                        <p>Pico de pressão baixa</p>
+                        <strong>70/40 mmHg</strong>
+                    </li>
+                    <li class="badge badge-alto">
+                        <span>17/05/2026 09:00</span>
+                        <p>Pico de pressão alta</p>
+                        <strong>170/110 mmHg</strong>
+                    </li>
+                </ul>
+
+            </div>
+
+            <p id="statusFiltro" role="status"></p>
+
+        </section>
+
+        <!-- ==========================================================
+                                  REGISTRO DE HUMOR 
+             ========================================================== -->
+        <section class="secao-humor" id="humor">
+
+            <header>
+                <h2>Registros de humor</h2>
+            </header>
+
+            <div class="humor-conteudo">
+
+                <ul class="humor-legenda">
+                    <li><span class="humor-numero">1</span>Feliz<svg class="feliz" xmlns="http://www.w3.org/2000/svg" width="60" height="10" viewBox="0 0 24 24" fill="none" stroke="#3de166" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-face-slightly-smiling-icon lucide-face-slightly-smiling"><path d="M15 10V9"/><path d="M16.472 15a6 6 0 01-8.943 0"/><path d="M9 10V9"/><circle cx="12" cy="12" r="10"/></svg></li>
+
+                    <li><span class="humor-numero">2</span>Triste<svg class="triste" xmlns="http://www.w3.org/2000/svg" width="232" height="232" viewBox="0 0 24 24" fill="none" stroke="#3d92e1" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-face-slightly-frowning-icon lucide-face-slightly-frowning"><path d="M15 10V9"/><path d="M9 10V9"/><path d="M9 16a5 5 0 016 0"/><circle cx="12" cy="12" r="10"/></svg></li>
+
+                    <li><span class="humor-numero">3</span>Estresse<svg class="estresse" xmlns="http://www.w3.org/2000/svg" width="232" height="232" viewBox="0 0 24 24" fill="none" stroke="#e44949" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-face-angry-icon lucide-face-angry"><path d="M15 11V9.416"/><path d="M17 9a5 5 0 00-3 1"/><path d="M7 9a5 5 0 013 1"/><path d="M9 11V9.416"/><path d="M9 16a5 5 0 016.001 0"/><circle cx="12" cy="12" r="10"/></svg></li>
+
+                    <li><span class="humor-numero">4</span>Neutro<svg class="neutro" xmlns="http://www.w3.org/2000/svg" width="232" height="232" viewBox="0 0 24 24" fill="none" stroke="#d1e000" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-face-neutral-icon lucide-face-neutral"><path d="M15 10V9"/><path d="M8 16h8"/><path d="M9 10V9"/><circle cx="12" cy="12" r="10"/></svg></li>
+
+                </ul>
+
+                <div class="humor-principal">
+
+                    <form class="filtros" id="filtrosHumorForm">
+                        <div class="filtro">
+                            <label for="humorInicio"> Período</label>
+                            <input type="date" id="humorInicio" name="inicio" value="2026-05-10">
+                            <span>–</span>
+                            <input type="date" id="humorFim" name="fim" value="2026-05-18">
+                        </div>
+
+                        <p class="filtro-info"> Última atualização: <strong id="ultimaAtualizacaoHumor">18/05/2026 12:00</strong></p>
+                    </form>
+
+                    <div class="humor-timeline" id="humorTimeline">
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ==========================================================
+                                    CONTATOS 
+             ========================================================== -->
+        <section class="secao-contatos" id="contatos">
+
+            <header>
+                <h2>Contatos</h2>
+            </header>
+
+            <div class="contatos-card">
+
+                <div class="contatos-abas" role="tablist" aria-label="Seções de contatos">
+                    <button type="button" class="aba" id="abaMeusContatos" role="tab"
+                        aria-selected="true" aria-controls="painelMeusContatos">Meus contatos</button>
+                    <button type="button" class="aba" id="abaAdicionarContato" role="tab"
+                        aria-selected="false" aria-controls="painelAdicionarContato">Adicionar contato</button>
+                </div>
+
+                <div class="contatos-painel" id="painelMeusContatos" role="tabpanel"
+                    aria-labelledby="abaMeusContatos">
+                    <ul class="lista-contatos-completa" id="listaContatosCompleta">
+                    </ul>
+                </div>
+
+                <div class="contatos-painel" id="painelAdicionarContato" role="tabpanel"
+                    aria-labelledby="abaAdicionarContato" hidden>
+
+                    <form id="formNovoContato" novalidate>
+                        <div class="campo">
+                            <label for="novoContatoNome">Nome</label>
+                            <input type="text" id="novoContatoNome" required>
+                            <span class="erro" id="erroNovoContatoNome"></span>
+                        </div>
+
+                        <div class="campo">
+                            <label for="novoContatoTelefone">Telefone</label>
+                            <input type="text" id="novoContatoTelefone" maxlength="15"
+                                placeholder="(00) 00000-0000" required>
+                            <span class="erro" id="erroNovoContatoTelefone"></span>
+                        </div>
+
+                        <div class="campo">
+                            <label for="novoContatoTipo">Tipo de contato</label>
+                            <select id="novoContatoTipo">
+                                <option value="familiar">Familiar</option>
+                                <option value="cuidador">Cuidador(a)</option>
+                                <option value="medico">Médico(a)</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+
+                        <p class="mensagem-status" id="mensagemStatusContato" role="status" aria-live="polite"></p>
+
+                        <button type="submit" class="btn-salvar" id="btnSalvarContato">Adicionar contato</button>
+                    </form>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ==========================================================
+                              SUPORTE PRIORITÁRIO
+             ========================================================== -->
+        <section class="secao-suporte" id="suporte">
+
+            <header>
+                <h2>Suporte prioritário</h2>
+                <p>Visita de um especialista em domicílio</p>
+            </header>
+            <div class="suporte-visita-card">
+                <p>A próxima visita será em:</p>
+                <p class="suporte-data">
+                    <span class="js-visita-data">02/06/2026</span>
+                    <span class="js-visita-hora">10:00</span>
+                </p>
+            </div>
+
+            <p class="suporte-aviso">
+                Não poderá receber a visita? Toque em
+                <button type="button" id="btnReagendar" class="btn-reagendar">Reagendar</button>
+                e veja a próxima visita.
+            </p>
+
+            <p class="mensagem-status" id="mensagemStatusVisita" role="status" aria-live="polite"></p>
+
+        </section>
+
+    </main>
+
+    <!-- ==========================================================
+                               SOBREPOSIÇÃO
+         ========================================================== -->
+    <div class="overlay" id="perfilOverlay" aria-hidden="true">
+        <div class="overlay-fundo" id="perfilFundo"></div>
+
+        <div class="overlay-caixa" role="dialog" aria-modal="true" aria-labelledby="perfilTitulo">
+
+            <button type="button" class="overlay-fechar" id="btnFecharPerfil" aria-label="Fechar janela de perfil">✕</button>
+
+            <h2 id="perfilTitulo">Meu perfil</h2>
+
+            <form id="formPerfil" novalidate>
+
+                <div class="perfil-foto">
+                    <img src="" alt="Foto de perfil de Maria" id="fotoPreview">
+                    <label for="inputFoto" class="perfil-foto-label">
+                        📷 Trocar foto
+                        <input type="file" id="inputFoto" accept="image/png, image/jpeg" hidden>
+                    </label>
+                </div>
+
+                <div class="campo">
+                    <label for="campoNome">Nome completo</label>
+                    <input type="text" id="campoNome" name="nome" required>
+                    <span class="erro" id="erroNome"></span>
+                </div>
+
+                <div class="campo">
+                    <label for="campoEmail">E-mail</label>
+                    <input type="email" id="campoEmail" name="email" required>
+                    <span class="erro" id="erroEmail"></span>
+                </div>
+
+                <div class="campo">
+                    <label for="campoCpf">CPF</label>
+                    <input type="text" id="campoCpf" name="cpf" maxlength="14" placeholder="000.000.000-00" required>
+                    <span class="erro" id="erroCpf"></span>
+                </div>
+
+                <div class="campo">
+                    <label for="campoTelefone">Número de telefone</label>
+                    <input type="text" id="campoTelefone" name="telefone" maxlength="15" placeholder="(00) 00000-0000" required>
+                    <span class="erro" id="erroTelefone"></span>
+                </div>
+
+                <div class="campo">
+                    <label for="campoTipo">Você é</label>
+                    <select id="campoTipo" name="tipo">
+                        <option value="paciente">Paciente</option>
+                        <option value="cuidador">Cuidador(a)</option>
+                        <option value="parente">Parente</option>
+                    </select>
+                </div>
+
+                <div class="campo campo-plano">
+                    <label>Plano atual</label>
+                    <p id="campoPlano">Basic +</p>
+                    <small>Para trocar de plano, acesse a seção "Planos" no site.</small>
+                </div>
+
+                <p class="mensagem-status" id="mensagemStatus" role="status" aria-live="polite"></p>
+
+                <div class="perfil-botoes">
+                    <button type="button" class="btn-cancelar" id="btnCancelarPerfil">Cancelar</button>
+                    <button type="submit" class="btn-salvar" id="btnSalvarPerfil">Salvar alterações</button>
+                </div>
+
+            </form>
+
+            <button type="button" class="btn-sair" id="btnSair">Sair da conta</button>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-container">
+
+            <div class="footer-logo">
+                <img src="img/img-footer.png" alt="Logo Footer">
+            </div>
+
+            <div class="footer-links">
+                <h3>Navegação</h3>
+
+                <ul>
+                    <li><a href="logado.html">Início</a></li>
+                    <li><a href="#monitoramento">Monitoramento</a></li>
+                    <li><a href="#contatos">Contatos</a></li>
+                    <li><a href="#suporte">Suporte Prioritário</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-links">
+                <h3>Suporte</h3>
+
+                <ul>
+                    <li><a href="">Central de ajuda</a></li>
+                    <li><a href="">Termos de uso</a></li>
+                    <li><a href="">Política de privacidade</a></li>
+                </ul>
+            </div>
+
+            <address class="footer-contact">
+                <h3>Contato</h3>
+
+                <p><a href="mailto:medicamais@gmail.com">medicamais@gmail.com</a></p>
+                <p>(11) 99999-9999</p>
+                <p><a href="https://www.google.com/maps/search/Avenida+Inajar+de+Souza, 1234+São+Paulo" target="_blank">Av. Inajar de Souza, 1234 - São Paulo, SP</a></p>
+            </address>
+
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="script.js"></script>
+
+</body>
+
+</html>
