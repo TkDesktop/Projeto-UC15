@@ -160,5 +160,6 @@ const api = {
 
     // Assinatura
     assinaturas: () => requisicao('/api/assinaturas'),
-    checkout: (dados) => requisicao('/api/assinaturas/checkout', { metodo: 'POST', corpo: dados })
+    checkout: (dados) => requisicao('/api/assinaturas/checkout', { metodo: 'POST', corpo: dados }),
+    trocarPlano: (dados) => requisicao('/api/assinaturas/plano', { metodo: 'PUT', corpo: dados })
 };

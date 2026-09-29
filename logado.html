@@ -154,7 +154,7 @@
                 </div>
 
                 <canvas id="pressaoChart"
-                    aria-label="Gráfico da variação da pressão arterial de Maria"
+                    aria-label="Gráfico da variação da pressão arterial (sistólica e diastólica)"
                     role="img"></canvas>
 
                 <ul class="badges">
@@ -178,6 +178,11 @@
             </div>
 
             <p id="statusFiltro" role="status"></p>
+
+            <details class="registros-detalhe">
+                <summary>Ver e excluir registros do período</summary>
+                <ul class="registros-lista" id="listaPressao"></ul>
+            </details>
 
         </section>
 
@@ -332,6 +337,9 @@
             </form>
 
             <p class="mensagem-status" id="mensagemStatusVisita" role="status" aria-live="polite"></p>
+
+            <h3 class="historico-titulo">Histórico de visitas</h3>
+            <ul class="registros-lista" id="listaVisitas"></ul>
 
         </section>
 
