@@ -1,0 +1,40 @@
+/* Formulários de registro do painel (logado.html) */
+.registro-form, .humor-registro {
+  background: #fff;
+  border: 1px solid var(--cinza-borda, #d9d9d9);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 16px 0;
+}
+.registro-form h3, .humor-registro h3 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  color: var(--cor-titulo, #1e1e1e);
+}
+.registro-campos { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.registro-campos label {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 13px; color: var(--cor-texto, #4a4a4a);
+}
+.registro-campos input {
+  padding: 10px 12px; border: 1px solid var(--cinza-borda, #d9d9d9);
+  border-radius: 8px; font-size: 15px; min-width: 130px;
+}
+.registro-campos input:focus {
+  outline: none; border-color: var(--azul, #2d7ff9);
+  box-shadow: 0 0 0 3px rgba(45, 127, 249, 0.2);
+}
+.btn-registrar {
+  background: var(--azul, #2d7ff9); color: #fff; border: 0; border-radius: 8px;
+  padding: 11px 20px; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.btn-registrar:hover { background: var(--azul-hover, #1a6ae0); }
+.btn-registrar:disabled, .btn-humor:disabled { opacity: 0.6; cursor: not-allowed; }
+.humor-botoes { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn-humor {
+  background: #f7f9fd; border: 2px solid #d0d7e6; border-radius: 999px;
+  padding: 10px 18px; font-size: 16px; cursor: pointer; transition: all .15s;
+}
+.btn-humor:hover { border-color: var(--azul, #2d7ff9); background: var(--azul-claro, #dceeff); transform: translateY(-1px); }
+.mensagem-status.erro { color: var(--vermelho, #e63946); }
+.mensagem-status.sucesso { color: var(--verde-escuro, #2e9e3f); }

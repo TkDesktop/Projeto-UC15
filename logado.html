@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Medica+ - Painel</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="painel.css">
 </head>
 
 <body class="pagina-logado">
@@ -109,6 +110,18 @@
                 <p class="filtro-info"> Última atualização: <strong>16/05/2026 12:00</strong></p>
             </form>
 
+            <form class="registro-form" id="formPressao" novalidate>
+                <h3>Registrar medida</h3>
+                <div class="registro-campos">
+                    <label>Sistólica (máxima)<input type="number" id="pressaoSistolica" min="40" max="300" placeholder="120"></label>
+                    <label>Diastólica (mínima)<input type="number" id="pressaoDiastolica" min="20" max="200" placeholder="80"></label>
+                    <label>Data e hora (opcional)<input type="datetime-local" id="pressaoDataHora"></label>
+                    <button type="submit" class="btn-registrar">Adicionar medida</button>
+                </div>
+                <p class="mensagem-status" id="mensagemPressao" role="status" aria-live="polite"></p>
+            </form>
+
+
             <div class="chart-card">
 
                 <div class="legenda">
@@ -189,6 +202,17 @@
                     <li><span class="humor-numero">4</span>Neutro<svg class="neutro" xmlns="http://www.w3.org/2000/svg" width="232" height="232" viewBox="0 0 24 24" fill="none" stroke="#d1e000" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-face-neutral-icon lucide-face-neutral"><path d="M15 10V9"/><path d="M8 16h8"/><path d="M9 10V9"/><circle cx="12" cy="12" r="10"/></svg></li>
 
                 </ul>
+
+                <div class="humor-registro">
+                    <h3>Como você está agora?</h3>
+                    <div class="humor-botoes">
+                        <button type="button" class="btn-humor" data-humor="0">😊 Feliz</button>
+                        <button type="button" class="btn-humor" data-humor="1">😐 Neutro</button>
+                        <button type="button" class="btn-humor" data-humor="2">😢 Triste</button>
+                        <button type="button" class="btn-humor" data-humor="3">😠 Estresse</button>
+                    </div>
+                    <p class="mensagem-status" id="mensagemHumor" role="status" aria-live="polite"></p>
+                </div>
 
                 <div class="humor-principal">
 
@@ -294,8 +318,18 @@
             <p class="suporte-aviso">
                 Não poderá receber a visita? Toque em
                 <button type="button" id="btnReagendar" class="btn-reagendar">Reagendar</button>
-                e veja a próxima visita.
+                (usa a data escolhida abaixo ou adia 14 dias) ou
+                <button type="button" id="btnCancelarVisita" class="btn-reagendar">Cancelar visita</button>.
             </p>
+
+            <form class="registro-form" id="formVisita" novalidate>
+                <h3>Agendar ou reagendar visita</h3>
+                <div class="registro-campos">
+                    <label>Data e hora<input type="datetime-local" id="visitaDataHora"></label>
+                    <label>Observação (opcional)<input type="text" id="visitaObservacao" maxlength="200"></label>
+                    <button type="submit" class="btn-registrar">Agendar visita</button>
+                </div>
+            </form>
 
             <p class="mensagem-status" id="mensagemStatusVisita" role="status" aria-live="polite"></p>
 
@@ -417,6 +451,7 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="api.js"></script>
     <script src="script.js"></script>
 
 </body>

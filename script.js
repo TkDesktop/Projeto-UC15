@@ -317,14 +317,18 @@ function atualizarPicosDePressao() {
     const cardAlto = document.querySelector('.pico-alto');
     const cardBaixo = document.querySelector('.pico-baixo');
 
-    const picoAlto = gerarPressaoAleatoria(140, 180, 90, 115);
-    const picoBaixo = gerarPressaoAleatoria(60, 90, 40, 60);
+    if (!dadosPressao.length) {
+        [cardAlto, cardBaixo].forEach(li => {
+            li.querySelector('.valor').textContent = '--';
+            li.querySelector('span').textContent = ' Sem registros';
+        });
+        return;
+    }
 
-    const dataAlto = gerarDataAleatoria(72);
-    const dataBaixo = gerarDataAleatoria(72);
-
-    preencherCard(cardAlto, picoAlto, dataAlto);
-    preencherCard(cardBaixo, picoBaixo, dataBaixo);
+    const alto = dadosPressao.reduce((a, b) => b.valor > a.valor ? b : a);
+    const baixo = dadosPressao.reduce((a, b) => b.valor < a.valor ? b : a);
+    preencherCard(cardAlto, { sistolica: alto.valor, diastolica: alto.diastolica }, new Date(alto.data));
+    preencherCard(cardBaixo, { sistolica: baixo.valor, diastolica: baixo.diastolica }, new Date(baixo.data));
 }
 
 function gerarPressaoAleatoria(sisMin, sisMax, diaMin, diaMax) {
@@ -359,153 +363,7 @@ function preencherCard(elementoLi, pressao, data) {
 
 
 /*  DADOS DO GRÁFICO */
-const dadosPressao = [{
-        data: '2026-05-01T00:00',
-        valor: 115
-    }, {
-        data: '2026-05-01T12:00',
-        valor: 118
-    },
-    {
-        data: '2026-05-02T00:00',
-        valor: 112
-    }, {
-        data: '2026-05-02T12:00',
-        valor: 116
-    },
-    {
-        data: '2026-05-03T00:00',
-        valor: 110
-    }, {
-        data: '2026-05-03T12:00',
-        valor: 114
-    },
-    {
-        data: '2026-05-04T00:00',
-        valor: 117
-    }, {
-        data: '2026-05-04T12:00',
-        valor: 119
-    },
-
-    {
-        data: '2026-05-05T00:00',
-        valor: 125
-    }, {
-        data: '2026-05-05T12:00',
-        valor: 135
-    },
-    {
-        data: '2026-05-06T00:00',
-        valor: 148
-    }, {
-        data: '2026-05-06T12:00',
-        valor: 158
-    },
-    {
-        data: '2026-05-07T00:00',
-        valor: 165
-    }, {
-        data: '2026-05-07T12:00',
-        valor: 150
-    },
-
-    {
-        data: '2026-05-08T00:00',
-        valor: 130
-    }, {
-        data: '2026-05-08T12:00',
-        valor: 110
-    },
-    {
-        data: '2026-05-09T00:00',
-        valor: 90
-    }, {
-        data: '2026-05-09T12:00',
-        valor: 75
-    },
-    {
-        data: '2026-05-10T00:00',
-        valor: 65
-    }, {
-        data: '2026-05-10T12:00',
-        valor: 85
-    },
-
-    {
-        data: '2026-05-11T00:00',
-        valor: 110
-    }, {
-        data: '2026-05-11T12:00',
-        valor: 116
-    },
-    {
-        data: '2026-05-12T00:00',
-        valor: 118
-    }, {
-        data: '2026-05-12T12:00',
-        valor: 115
-    },
-    {
-        data: '2026-05-13T00:00',
-        valor: 112
-    }, {
-        data: '2026-05-13T12:00',
-        valor: 117
-    },
-    {
-        data: '2026-05-14T00:00',
-        valor: 119
-    }, {
-        data: '2026-05-14T12:00',
-        valor: 116
-    },
-
-    {
-        data: '2026-05-15T00:00',
-        valor: 128
-    }, {
-        data: '2026-05-15T12:00',
-        valor: 140
-    },
-    {
-        data: '2026-05-16T00:00',
-        valor: 155
-    }, {
-        data: '2026-05-16T12:00',
-        valor: 168
-    },
-
-    {
-        data: '2026-05-17T00:00',
-        valor: 172
-    }, {
-        data: '2026-05-17T12:00',
-        valor: 150
-    },
-
-    {
-        data: '2026-05-18T00:00',
-        valor: 130
-    }, {
-        data: '2026-05-18T12:00',
-        valor: 118
-    },
-    {
-        data: '2026-05-19T00:00',
-        valor: 115
-    }, {
-        data: '2026-05-19T12:00',
-        valor: 117
-    },
-    {
-        data: '2026-05-20T00:00',
-        valor: 114
-    }, {
-        data: '2026-05-20T12:00',
-        valor: 116
-    }
-];
+let dadosPressao = [];
 
 
 /*  GRÁFICO + FILTRO + BADGES */
@@ -592,7 +450,7 @@ function atualizarBadges(dados) {
     if (temPicoBaixo) listaBadges.appendChild(criarBadge(picoBaixo, 'baixo'));
 
     statusFiltro.textContent = (!temPicoAlto && !temPicoBaixo) ?
-        'Nesse período a pressão de Maria se manteve dentro da faixa normal 👍' :
+        'Nesse período sua pressão se manteve dentro da faixa normal 👍' :
         '';
 }
 
@@ -796,7 +654,7 @@ function fecharPerfil() {
 }
 
 function sairDaConta() {
-    localStorage.removeItem('medicaMaisUsuarioLogado');
+    limparSessao();
     window.location.href = 'index.html';
 }
 
@@ -1203,102 +1061,107 @@ function iniciarFormularioContato() {
 
 
 /*  SUPORTE PRIORITÁRIO */
-let proximaVisita = new Date('2026-06-02T10:00:00');
+let visitaAtual = null; // { id, data: Date }
 
 function atualizarVisualVisita() {
-    const dia = String(proximaVisita.getDate()).padStart(2, '0');
-    const mes = String(proximaVisita.getMonth() + 1).padStart(2, '0');
-    const ano = proximaVisita.getFullYear();
-    const hora = String(proximaVisita.getHours()).padStart(2, '0');
-    const min = String(proximaVisita.getMinutes()).padStart(2, '0');
+    const datas = document.querySelectorAll('.js-visita-data');
+    const horas = document.querySelectorAll('.js-visita-hora');
 
-    document.querySelectorAll('.js-visita-data').forEach(el => {
-        el.textContent = `${dia}/${mes}/${ano}`;
-    });
+    if (!visitaAtual) {
+        datas.forEach(el => { el.textContent = 'Nenhuma visita agendada'; });
+        horas.forEach(el => { el.textContent = ''; });
+        return;
+    }
 
-    document.querySelectorAll('.js-visita-hora').forEach(el => {
-        el.textContent = `${hora}:${min}`;
-    });
-}
-
-function reagendarVisitaNoServidor() {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            proximaVisita.setDate(proximaVisita.getDate() + 14);
-            resolve(proximaVisita);
-        }, 600);
+    const d = visitaAtual.data;
+    const dia = String(d.getDate()).padStart(2, '0');
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    datas.forEach(el => { el.textContent = `${dia}/${mes}/${d.getFullYear()}`; });
+    horas.forEach(el => {
+        el.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     });
 }
 
-function iniciarReagendamento() {
-    const botao = document.getElementById('btnReagendar');
-    const mensagem = document.getElementById('mensagemStatusVisita');
+async function carregarVisita() {
+    try {
+        const v = await api.proximaVisita();
+        visitaAtual = v ? { id: v.id, data: new Date(dataDaApi(v.dataHora)) } : null;
+    } catch (e) {
+        visitaAtual = null; // sem visita futura
+    }
+    atualizarVisualVisita();
+}
 
-    botao.addEventListener('click', async () => {
-        botao.disabled = true;
-        botao.textContent = 'Reagendando...';
+function iniciarVisitas() {
+    const form = document.getElementById('formVisita');
+    const inputData = document.getElementById('visitaDataHora');
+    const status = 'mensagemStatusVisita';
 
-        await reagendarVisitaNoServidor();
-        atualizarVisualVisita();
+    form.addEventListener('submit', async (evento) => {
+        evento.preventDefault();
+        if (!inputData.value || new Date(inputData.value) <= new Date()) {
+            mostrarStatus(status, 'Escolha uma data e hora no futuro.', 'erro');
+            return;
+        }
+        try {
+            await api.agendarVisita(inputData.value, document.getElementById('visitaObservacao').value.trim());
+            await carregarVisita();
+            form.reset();
+            mostrarStatus(status, 'Visita agendada!', 'sucesso');
+        } catch (e) {
+            mostrarStatus(status, e.message, 'erro');
+        }
+    });
 
-        mensagem.textContent = 'Visita reagendada! Confira a nova data acima.';
-        mensagem.className = 'mensagem-status sucesso';
+    document.getElementById('btnReagendar').addEventListener('click', async () => {
+        if (!visitaAtual) {
+            mostrarStatus(status, 'Não há visita agendada para reagendar.', 'erro');
+            return;
+        }
+        let nova = new Date(visitaAtual.data);
+        if (inputData.value) nova = new Date(inputData.value);
+        else nova.setDate(nova.getDate() + 14);
 
-        botao.disabled = false;
-        botao.textContent = 'Reagendar';
+        if (nova <= new Date()) {
+            mostrarStatus(status, 'A nova data precisa estar no futuro.', 'erro');
+            return;
+        }
+        try {
+            await api.reagendarVisita(visitaAtual.id, nova);
+            await carregarVisita();
+            form.reset();
+            mostrarStatus(status, 'Visita reagendada! Confira a nova data acima.', 'sucesso');
+        } catch (e) {
+            mostrarStatus(status, e.message, 'erro');
+        }
+    });
 
-        setTimeout(() => {
-            mensagem.textContent = '';
-        }, 3000);
+    document.getElementById('btnCancelarVisita').addEventListener('click', async () => {
+        if (!visitaAtual) {
+            mostrarStatus(status, 'Não há visita agendada para cancelar.', 'erro');
+            return;
+        }
+        if (!confirm('Cancelar a visita agendada?')) return;
+        try {
+            await api.cancelarVisita(visitaAtual.id);
+            await carregarVisita();
+            mostrarStatus(status, 'Visita cancelada.', 'sucesso');
+        } catch (e) {
+            mostrarStatus(status, e.message, 'erro');
+        }
     });
 }
 
 
 /*  REGISTRO DE HUMOR */
 const emojisPorHumor = {
-    feliz: document.querySelector('.feliz'),
-    neutro: document.querySelector('.triste'),
-    triste: document.querySelector('.estresse'),
-    estresse: document.querySelector('.neutro')
+    feliz: document.querySelector('.humor-legenda .feliz'),
+    neutro: document.querySelector('.humor-legenda .neutro'),
+    triste: document.querySelector('.humor-legenda .triste'),
+    estresse: document.querySelector('.humor-legenda .estresse')
 };
 
-const dadosHumor = [{
-        data: '2026-05-10T12:00',
-        humor: 'feliz'
-    },
-    {
-        data: '2026-05-11T12:00',
-        humor: 'neutro'
-    },
-    {
-        data: '2026-05-12T12:00',
-        humor: 'triste'
-    },
-    {
-        data: '2026-05-13T12:00',
-        humor: 'neutro'
-    },
-    {
-        data: '2026-05-14T12:00',
-        humor: 'neutro'
-    },
-    {
-        data: '2026-05-15T12:00',
-        humor: 'estresse'
-    },
-    {
-        data: '2026-05-16T12:00',
-        humor: 'feliz'
-    },
-    {
-        data: '2026-05-17T12:00',
-        humor: 'neutro'
-    },
-    {
-        data: '2026-05-18T12:00',
-        humor: 'feliz'
-    }
-];
+let dadosHumor = [];
 
 function filtrarHumorPorPeriodo(dataInicio, dataFim) {
     return dadosHumor.filter(item => {
@@ -1326,7 +1189,7 @@ function renderizarTimelineHumor(dados) {
         div.className = 'humor-dia';
         div.innerHTML = `
             <span class="emoji">${emojisPorHumor[item.humor].outerHTML}</span>
-            <span class="data">${dia}/${mes}<br>${hora}:00</span>
+            <span class="data">${dia}/${mes}<br>${hora}:${String(data.getMinutes()).padStart(2, '0')}</span>
         `;
 
         container.appendChild(div);
@@ -1359,19 +1222,120 @@ function aplicarFiltroHumor() {
 }
 
 
+/*  INTEGRAÇÃO COM A API */
+// A API devolve datas em UTC sem o "Z"; sem ele o navegador leria como hora local.
+function dataDaApi(texto) {
+    return /Z$|[+-]\d\d:\d\d$/.test(texto) ? texto : texto + 'Z';
+}
+
+function paraInputData(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function mostrarStatus(id, texto, tipo) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = texto;
+    el.className = 'mensagem-status ' + (tipo || '');
+    clearTimeout(el._t);
+    if (texto) el._t = setTimeout(() => { el.textContent = ''; }, 4000);
+}
+
+function definirPeriodoPadrao() {
+    const fim = new Date();
+    const inicio = new Date();
+    inicio.setDate(inicio.getDate() - 30);
+    ['periodoInicio', 'humorInicio'].forEach(id => { document.getElementById(id).value = paraInputData(inicio); });
+    ['periodoFim', 'humorFim'].forEach(id => { document.getElementById(id).value = paraInputData(fim); });
+}
+
+async function carregarPressao() {
+    try {
+        const lista = await api.pressoes();
+        dadosPressao = lista.map(p => ({
+            id: p.id, data: dataDaApi(p.dataHora), valor: p.sistolica, diastolica: p.diastolica
+        }));
+    } catch (e) {
+        dadosPressao = [];
+        mostrarStatus('mensagemPressao', e.message, 'erro');
+    }
+    atualizarPicosDePressao();
+    aplicarFiltro();
+}
+
+async function carregarHumor() {
+    try {
+        const lista = await api.humores();
+        dadosHumor = lista.map(h => ({
+            id: h.id, data: dataDaApi(h.dataHora), humor: HUMOR_NOME[h.humor].toLowerCase()
+        }));
+    } catch (e) {
+        dadosHumor = [];
+        mostrarStatus('mensagemHumor', e.message, 'erro');
+    }
+    aplicarFiltroHumor();
+}
+
+function iniciarFormPressao() {
+    const form = document.getElementById('formPressao');
+    form.addEventListener('submit', async (evento) => {
+        evento.preventDefault();
+        const sis = parseInt(document.getElementById('pressaoSistolica').value, 10);
+        const dia = parseInt(document.getElementById('pressaoDiastolica').value, 10);
+        const quando = document.getElementById('pressaoDataHora').value;
+
+        if (!sis || !dia) return mostrarStatus('mensagemPressao', 'Informe a sistólica e a diastólica.', 'erro');
+        if (sis < 40 || sis > 300 || dia < 20 || dia > 200) return mostrarStatus('mensagemPressao', 'Valores fora do intervalo aceito.', 'erro');
+        if (sis <= dia) return mostrarStatus('mensagemPressao', 'A sistólica deve ser maior que a diastólica.', 'erro');
+
+        const botao = form.querySelector('button[type="submit"]');
+        botao.disabled = true;
+        try {
+            await api.registrarPressao(sis, dia, quando || null);
+            form.reset();
+            await carregarPressao();
+            mostrarStatus('mensagemPressao', 'Medida registrada!', 'sucesso');
+        } catch (e) {
+            mostrarStatus('mensagemPressao', e.message, 'erro');
+        } finally {
+            botao.disabled = false;
+        }
+    });
+}
+
+function iniciarBotoesHumor() {
+    document.querySelectorAll('.btn-humor').forEach(botao => {
+        botao.addEventListener('click', async () => {
+            document.querySelectorAll('.btn-humor').forEach(b => { b.disabled = true; });
+            try {
+                await api.registrarHumor(Number(botao.dataset.humor), null);
+                await carregarHumor();
+                mostrarStatus('mensagemHumor', 'Humor registrado!', 'sucesso');
+            } catch (e) {
+                mostrarStatus('mensagemHumor', e.message, 'erro');
+            } finally {
+                document.querySelectorAll('.btn-humor').forEach(b => { b.disabled = false; });
+            }
+        });
+    });
+}
+
+
 /*  INICIALIZAÇÃO DO LOGADO */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     if (!document.getElementById('saudacaoNome')) return;
+    if (!exigirLogin()) return;
 
     atualizarSaudacao();
     iniciarMenuMobile();
     iniciarScrollSpy();
     iniciarCardsRapidos();
 
-    atualizarPicosDePressao();
-    aplicarFiltro();
+    definirPeriodoPadrao();
     document.getElementById('periodoInicio').addEventListener('change', aplicarFiltro);
     document.getElementById('periodoFim').addEventListener('change', aplicarFiltro);
+    document.getElementById('humorInicio').addEventListener('change', aplicarFiltroHumor);
+    document.getElementById('humorFim').addEventListener('change', aplicarFiltroHumor);
 
     iniciarPerfil();
 
@@ -1380,12 +1344,11 @@ document.addEventListener('DOMContentLoaded', () => {
     iniciarRemocaoContatos();
     iniciarFormularioContato();
 
-    atualizarVisualVisita();
-    iniciarReagendamento();
+    iniciarFormPressao();
+    iniciarBotoesHumor();
+    iniciarVisitas();
 
-    aplicarFiltroHumor();
-    document.getElementById('humorInicio').addEventListener('change', aplicarFiltroHumor);
-    document.getElementById('humorFim').addEventListener('change', aplicarFiltroHumor);
+    await Promise.all([carregarPressao(), carregarHumor(), carregarVisita()]);
 });
 
 
