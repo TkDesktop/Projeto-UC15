@@ -369,10 +369,19 @@ let dadosPressao = [];
 /*  GRÁFICO + FILTRO + BADGES */
 let graficoPressao = null;
 
+const COR_MEDIDA = { alta: '#e63946', baixa: '#2d7ff9', normal: '#2e9e3f' };
+
+// Regra unica usada no grafico, nos picos e nas estatisticas
+function classificarMedida(item) {
+    if (item.valor > 140 || item.diastolica > 90) return 'alta';
+    if (item.valor < 90 || item.diastolica < 60) return 'baixa';
+    return 'normal';
+}
+
 function corDoPonto(valor) {
-    if (valor > 140) return '#e63946';
-    if (valor < 90) return '#2d7ff9';
-    return '#2e9e3f';
+    if (valor > 140) return COR_MEDIDA.alta;
+    if (valor < 90) return COR_MEDIDA.baixa;
+    return COR_MEDIDA.normal;
 }
 
 function filtrarPorPeriodo(dataInicio, dataFim) {
@@ -386,8 +395,9 @@ function renderizarGrafico(dados) {
     const ctx = document.getElementById('pressaoChart');
 
     const labels = dados.map(item => formatarDataCurta(new Date(item.data)));
-    const valores = dados.map(item => item.valor);
-    const cores = dados.map(item => corDoPonto(item.valor));
+    const sistolicas = dados.map(item => item.valor);
+    const diastolicas = dados.map(item => item.diastolica);
+    const cores = dados.map(item => COR_MEDIDA[classificarMedida(item)]);
 
     if (graficoPressao) {
         graficoPressao.destroy();
@@ -398,8 +408,8 @@ function renderizarGrafico(dados) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Pressão sistólica (mmHg)',
-                data: valores,
+                label: 'Sistólica (mmHg)',
+                data: sistolicas,
                 borderColor: '#2e9e3f',
                 borderWidth: 2,
                 pointBackgroundColor: cores,
@@ -408,13 +418,25 @@ function renderizarGrafico(dados) {
                 pointHoverRadius: 7,
                 tension: 0.4,
                 fill: false
+            }, {
+                label: 'Diastólica (mmHg)',
+                data: diastolicas,
+                borderColor: '#7a8ba6',
+                borderDash: [6, 4],
+                borderWidth: 2,
+                pointBackgroundColor: '#7a8ba6',
+                pointBorderColor: '#7a8ba6',
+                pointRadius: 3,
+                tension: 0.4,
+                fill: false
             }]
         },
         options: {
             responsive: true,
             plugins: {
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'bottom'
                 }
             },
             scales: {
@@ -440,16 +462,17 @@ function atualizarBadges(dados) {
         return;
     }
 
-    const picoAlto = dados.reduce((maior, atual) => atual.valor > maior.valor ? atual : maior, dados[0]);
-    const picoBaixo = dados.reduce((menor, atual) => atual.valor < menor.valor ? atual : menor, dados[0]);
+    const altas = dados.filter(d => classificarMedida(d) === 'alta');
+    const baixas = dados.filter(d => classificarMedida(d) === 'baixa');
 
-    const temPicoAlto = picoAlto.valor > 140;
-    const temPicoBaixo = picoBaixo.valor < 90;
+    if (altas.length) {
+        listaBadges.appendChild(criarBadge(altas.reduce((a, b) => b.valor > a.valor ? b : a), 'alto'));
+    }
+    if (baixas.length) {
+        listaBadges.appendChild(criarBadge(baixas.reduce((a, b) => b.valor < a.valor ? b : a), 'baixo'));
+    }
 
-    if (temPicoAlto) listaBadges.appendChild(criarBadge(picoAlto, 'alto'));
-    if (temPicoBaixo) listaBadges.appendChild(criarBadge(picoBaixo, 'baixo'));
-
-    statusFiltro.textContent = (!temPicoAlto && !temPicoBaixo) ?
+    statusFiltro.textContent = (!altas.length && !baixas.length) ?
         'Nesse período sua pressão se manteve dentro da faixa normal 👍' :
         '';
 }
@@ -458,16 +481,67 @@ function criarBadge(item, tipo) {
     const li = document.createElement('li');
     li.className = `badge badge-${tipo}`;
 
-    const dataFormatada = formatarDataCompleta(new Date(item.data));
     const textoTag = tipo === 'alto' ? 'Pico de pressão alta' : 'Pico de pressão baixa';
-
-    li.innerHTML = `
-        <span>${dataFormatada}</span>
-        <p>${textoTag}</p>
-        <strong>${item.valor} mmHg</strong>
-    `;
+    li.appendChild(criarItem('span', '', formatarDataCompleta(new Date(item.data))));
+    li.appendChild(criarItem('p', '', textoTag));
+    li.appendChild(criarItem('strong', '', `${item.valor}/${item.diastolica} mmHg`));
 
     return li;
+}
+
+function atualizarEstatisticas(dados) {
+    let painel = document.getElementById('estatisticasPressao');
+    if (!painel) {
+        painel = document.createElement('div');
+        painel.id = 'estatisticasPressao';
+        painel.className = 'estatisticas';
+        const alvo = document.querySelector('.badges');
+        alvo.parentNode.insertBefore(painel, alvo);
+    }
+    painel.innerHTML = '';
+
+    if (dados.length === 0) {
+        painel.appendChild(criarItem('p', 'estat-vazio', 'Sem medições no período para avaliar.'));
+        return;
+    }
+
+    const n = dados.length;
+    const media = campo => Math.round(dados.reduce((soma, d) => soma + d[campo], 0) / n);
+    const mediaSis = media('valor');
+    const mediaDia = media('diastolica');
+    const maior = dados.reduce((a, b) => b.valor > a.valor ? b : a);
+    const menor = dados.reduce((a, b) => b.valor < a.valor ? b : a);
+    const normais = dados.filter(d => classificarMedida(d) === 'normal').length;
+    const altas = dados.filter(d => classificarMedida(d) === 'alta').length;
+    const baixas = dados.filter(d => classificarMedida(d) === 'baixa').length;
+    const classeMedia = classificarMedida({ valor: mediaSis, diastolica: mediaDia });
+
+    const textos = {
+        normal: 'A média do período está dentro da faixa normal.',
+        alta: 'A média do período está acima do ideal. Converse com um profissional de saúde.',
+        baixa: 'A média do período está abaixo do ideal. Converse com um profissional de saúde.'
+    };
+
+    const itens = [
+        ['Medições', String(n)],
+        ['Média', `${mediaSis}/${mediaDia} mmHg`],
+        ['Maior sistólica', `${maior.valor}/${maior.diastolica} mmHg`],
+        ['Menor sistólica', `${menor.valor}/${menor.diastolica} mmHg`],
+        ['Na faixa normal', `${Math.round(normais * 100 / n)}% (${normais} de ${n})`],
+        ['Alertas', `${altas} alta(s) · ${baixas} baixa(s)`]
+    ];
+
+    const grade = criarItem('div', 'estat-grade');
+    itens.forEach(([rotulo, valor]) => {
+        const caixa = criarItem('div', 'estat-item');
+        caixa.appendChild(criarItem('span', 'estat-rotulo', rotulo));
+        caixa.appendChild(criarItem('strong', 'estat-valor', valor));
+        grade.appendChild(caixa);
+    });
+    painel.appendChild(grade);
+
+    painel.appendChild(criarItem('p', 'estat-avaliacao estat-' + classeMedia, textos[classeMedia]));
+    painel.appendChild(criarItem('p', 'estat-nota', 'Informação de apoio, não substitui avaliação médica.'));
 }
 
 function atualizarUltimaAtualizacao(dados) {
@@ -494,6 +568,7 @@ function aplicarFiltro() {
     renderizarGrafico(dadosFiltrados);
     atualizarBadges(dadosFiltrados);
     atualizarUltimaAtualizacao(dadosFiltrados);
+    atualizarEstatisticas(dadosFiltrados);
 }
 
 
@@ -1620,8 +1695,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     /*  CONFIRMACAO DE EMAIL */
-    document.querySelector('.cadastro').insertAdjacentHTML('afterend',
-        '<p class="cadastro"><strong id="link-confirmar">Confirmar meu email</strong></p>');
 
     const overlayConfirmar = document.querySelector('#overlay-confirmar');
     const formConfirmar = document.querySelector('.form-confirmar');
@@ -1689,10 +1762,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             if (colado.length) digitos[Math.min(colado.length, digitos.length - 1)].focus();
         });
-    });
-
-    document.querySelector('#link-confirmar').addEventListener('click', function () {
-        abrirConfirmacao(ehEmailValido(campoEmail.value.trim()) ? campoEmail.value.trim() : '');
     });
 
     document.querySelector('#cancelar-confirmar').addEventListener('click', fecharConfirmacao);
