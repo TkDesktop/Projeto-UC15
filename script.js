@@ -516,16 +516,8 @@ function formatarDataCurta(data) {
 
 
 /*  PERFIL */
-const CHAVE_USUARIOS = 'medicaMaisUsuarios';
-const CHAVE_LOGADO = 'medicaMaisUsuarioLogado';
-
-function lerJson(chave, padrao) {
-    try {
-        return JSON.parse(localStorage.getItem(chave)) || padrao;
-    } catch (e) {
-        return padrao;
-    }
-}
+const TIPOS_USUARIO = ['paciente', 'cuidador', 'parente'];
+const CHAVE_SESSAO_USUARIO = 'medicaMaisUsuarioLogado';
 
 function formatarCpf(valor) {
     const numeros = String(valor || '').replace(/\D/g, '').slice(0, 11);
@@ -543,51 +535,35 @@ function formatarTelefone(valor) {
     return numeros.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2');
 }
 
-function carregarUsuarioLogado() {
-    const logado = lerJson(CHAVE_LOGADO, null) || {};
-    const cadastro = lerJson(CHAVE_USUARIOS, []).find(function (u) {
-        return u.email === logado.email;
-    }) || {};
+function tipoUsuarioDaApi(t) {
+    if (typeof t === 'string') return t.toLowerCase();
+    return TIPOS_USUARIO[t] || 'paciente';
+}
 
+// Converte o JSON da API (UsuarioRespostaDto) para o formato usado nos campos da tela
+function usuarioDaApi(u) {
+    u = u || {};
     return {
-        nome: cadastro.nome || logado.nome || '',
-        email: cadastro.email || logado.email || '',
-        cpf: formatarCpf(cadastro.cpf),
-        telefone: formatarTelefone(cadastro.telefone),
-        tipo: cadastro.papel || logado.papel || 'paciente',
-        plano: cadastro.plano || 'Basic + Anual',
-        foto: cadastro.foto || null
+        nome: u.nome || '',
+        email: u.email || '',
+        cpf: formatarCpf(u.cpf),
+        telefone: formatarTelefone(u.telefone),
+        tipo: tipoUsuarioDaApi(u.tipoUsuario),
+        plano: (u.plano !== null && u.plano !== undefined) ? 'Plano ativo' : 'Nenhum plano contratado',
+        foto: u.fotoUrl || null
     };
 }
 
-let dadosUsuario = carregarUsuarioLogado();
-
-function gravarUsuarioLogado(dados) {
-    const usuarios = lerJson(CHAVE_USUARIOS, []);
-    const emailAntigo = (lerJson(CHAVE_LOGADO, {}) || {}).email;
-
-    const indice = usuarios.findIndex(function (u) {
-        return u.email === emailAntigo;
-    });
-
-    if (indice >= 0) {
-        usuarios[indice] = Object.assign({}, usuarios[indice], {
-            nome: dados.nome,
-            email: dados.email.toLowerCase(),
-            cpf: dados.cpf,
-            telefone: dados.telefone,
-            papel: dados.tipo,
-            foto: dados.foto || null
-        });
-        localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(usuarios));
+function lerSessaoUsuario() {
+    try {
+        return JSON.parse(localStorage.getItem(CHAVE_SESSAO_USUARIO)) || {};
+    } catch (e) {
+        return {};
     }
-
-    localStorage.setItem(CHAVE_LOGADO, JSON.stringify({
-        nome: dados.nome,
-        email: dados.email.toLowerCase(),
-        papel: dados.tipo
-    }));
 }
+
+let dadosUsuario = usuarioDaApi(lerSessaoUsuario());
+let fotoPendente; // undefined = a foto nao mudou
 
 function atualizarSaudacao() {
     const titulo = document.getElementById('saudacaoNome');
@@ -595,6 +571,12 @@ function atualizarSaudacao() {
 
     const primeiroNome = dadosUsuario.nome ? dadosUsuario.nome.split(' ')[0] : '';
     titulo.textContent = primeiroNome ? 'Olá, ' + primeiroNome + '!' : 'Olá!';
+
+    const grafico = document.getElementById('pressaoChart');
+    if (grafico) {
+        grafico.setAttribute('aria-label',
+            'Gráfico da variação da pressão arterial' + (primeiroNome ? ' de ' + primeiroNome : ''));
+    }
 }
 
 const overlay = document.getElementById('perfilOverlay');
@@ -603,47 +585,69 @@ const formPerfil = document.getElementById('formPerfil');
 const btnSalvarPerfil = document.getElementById('btnSalvarPerfil');
 const mensagemStatus = document.getElementById('mensagemStatus');
 
-function buscarPerfil() {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(dadosUsuario);
-        }, 500);
-    });
+async function buscarPerfil() {
+    const u = await api.perfil();
+    localStorage.setItem(CHAVE_SESSAO_USUARIO, JSON.stringify(u));
+    dadosUsuario = usuarioDaApi(u);
+    return dadosUsuario;
 }
 
-function salvarPerfilNoServidor(dadosNovos) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            dadosUsuario = {
-                ...dadosUsuario,
-                ...dadosNovos
-            };
-            gravarUsuarioLogado(dadosUsuario);
-            resolve(dadosUsuario);
-        }, 900);
+// A API so aceita telefone, email e fotoUrl no PUT /api/usuarios/me
+async function salvarPerfilNoServidor(novos) {
+    const u = await api.atualizarPerfil({
+        telefone: novos.telefone,
+        email: novos.email,
+        fotoUrl: novos.foto
     });
+    localStorage.setItem(CHAVE_SESSAO_USUARIO, JSON.stringify(u));
+    dadosUsuario = usuarioDaApi(u);
+    return dadosUsuario;
+}
+
+function mostrarMensagemPerfil(texto, classe) {
+    mensagemStatus.textContent = texto;
+    mensagemStatus.className = 'mensagem-status ' + (classe || '');
 }
 
 async function abrirPerfil() {
     overlay.classList.add('aberto');
     overlay.setAttribute('aria-hidden', 'false');
-    mensagemStatus.textContent = '';
-    mensagemStatus.className = 'mensagem-status';
+    mostrarMensagemPerfil('');
+    fotoPendente = undefined;
 
-    const perfil = await buscarPerfil();
-    preencherFormulario(perfil);
+    preencherFormulario(dadosUsuario);
+    try {
+        preencherFormulario(await buscarPerfil());
+        atualizarSaudacao();
+    } catch (erro) {
+        mostrarMensagemPerfil(erro.message, 'erro-geral');
+    }
 
-    document.getElementById('campoNome').focus();
+    document.getElementById('campoTelefone').focus();
 }
 
-function preencherFormulario(perfil) {
-    document.getElementById('campoNome').value = perfil.nome;
-    document.getElementById('campoEmail').value = perfil.email;
-    document.getElementById('campoCpf').value = perfil.cpf;
-    document.getElementById('campoTelefone').value = perfil.telefone;
-    document.getElementById('campoTipo').value = perfil.tipo;
-    document.getElementById('campoPlano').textContent = perfil.plano;
-    document.getElementById('fotoPreview').src = perfil.foto || 'img/avatar.png';
+function preencherFormulario(p) {
+    document.getElementById('campoNome').value = p.nome;
+    document.getElementById('campoEmail').value = p.email;
+    document.getElementById('campoCpf').value = p.cpf;
+    document.getElementById('campoTelefone').value = p.telefone;
+    document.getElementById('campoTipo').value = p.tipo;
+    document.getElementById('campoPlano').textContent = p.plano;
+
+    const foto = document.getElementById('fotoPreview');
+    foto.src = p.foto || 'img/avatar.png';
+    foto.alt = 'Foto de perfil' + (p.nome ? ' de ' + p.nome : '');
+
+    // A API nao permite alterar estes dados por aqui
+    ['campoNome', 'campoEmail', 'campoCpf'].forEach(function (id) {
+        const el = document.getElementById(id);
+        el.readOnly = true;
+        el.title = 'Este dado não pode ser alterado por aqui.';
+        el.style.background = '#f1f1f1';
+    });
+    const tipo = document.getElementById('campoTipo');
+    tipo.disabled = true;
+    tipo.style.background = '#f1f1f1';
 }
 
 function fecharPerfil() {
@@ -659,71 +663,68 @@ function sairDaConta() {
 }
 
 function aplicarMascaraCpf(evento) {
-    let numeros = evento.target.value.replace(/\D/g, '');
-    numeros = numeros.slice(0, 11);
-
-    numeros = numeros.replace(/(\d{3})(\d)/, '$1.$2');
-    numeros = numeros.replace(/(\d{3})(\d)/, '$1.$2');
-    numeros = numeros.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-
-    evento.target.value = numeros;
+    evento.target.value = formatarCpf(evento.target.value);
 }
 
 function aplicarMascaraTelefone(evento) {
-    let numeros = evento.target.value.replace(/\D/g, '');
-    numeros = numeros.slice(0, 11);
-
-    numeros = numeros.replace(/(\d{2})(\d)/, '($1) $2');
-    numeros = numeros.replace(/(\d{5})(\d{1,4})$/, '$1-$2');
-
-    evento.target.value = numeros;
+    evento.target.value = formatarTelefone(evento.target.value);
 }
 
-function preverFoto(evento) {
-    const arquivo = evento.target.files[0];
+// Reduz a foto (max. 256 px, JPEG) para caber no banco como texto
+function reduzirImagem(arquivo, lado) {
+    lado = lado || 256;
+    return new Promise(function (resolve, reject) {
+        const leitor = new FileReader();
+        leitor.onerror = function () { reject(new Error('Não foi possível ler a imagem.')); };
+        leitor.onload = function () {
+            const img = new Image();
+            img.onerror = function () { reject(new Error('Arquivo de imagem inválido.')); };
+            img.onload = function () {
+                const escala = Math.min(1, lado / Math.max(img.width, img.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(img.width * escala));
+                canvas.height = Math.max(1, Math.round(img.height * escala));
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.src = leitor.result;
+        };
+        leitor.readAsDataURL(arquivo);
+    });
+}
+
+async function preverFoto(evento) {
+    const entrada = evento.target;
+    const arquivo = entrada.files[0];
     if (!arquivo) return;
 
-    const leitor = new FileReader();
+    if (!/^image\/(png|jpeg)$/.test(arquivo.type)) {
+        mostrarMensagemPerfil('Use uma imagem PNG ou JPG.', 'erro-geral');
+        entrada.value = '';
+        return;
+    }
 
-    leitor.onload = () => {
-        document.getElementById('fotoPreview').src = leitor.result;
-        dadosUsuario.foto = leitor.result;
-    };
-
-    leitor.readAsDataURL(arquivo);
+    try {
+        fotoPendente = await reduzirImagem(arquivo);
+        document.getElementById('fotoPreview').src = fotoPendente;
+        mostrarMensagemPerfil('Foto escolhida. Clique em "Salvar alterações" para guardá-la.');
+    } catch (erro) {
+        mostrarMensagemPerfil(erro.message, 'erro-geral');
+    }
+    entrada.value = '';
 }
 
 function validarFormulario() {
     limparErros();
-    let valido = true;
-
-    const nome = document.getElementById('campoNome').value.trim();
-    const email = document.getElementById('campoEmail').value.trim();
-    const cpf = document.getElementById('campoCpf').value.trim();
     const telefone = document.getElementById('campoTelefone').value.trim();
-
-    if (nome.length < 3) {
-        mostrarErro('campoNome', 'erroNome', 'Digite o nome completo.');
-        valido = false;
-    }
-
-    const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!regexEmail.test(email)) {
-        mostrarErro('campoEmail', 'erroEmail', 'Digite um e-mail válido.');
-        valido = false;
-    }
-
-    if (cpf.replace(/\D/g, '').length !== 11) {
-        mostrarErro('campoCpf', 'erroCpf', 'CPF deve ter 11 números.');
-        valido = false;
-    }
-
     if (telefone.replace(/\D/g, '').length < 10) {
         mostrarErro('campoTelefone', 'erroTelefone', 'Telefone incompleto.');
-        valido = false;
+        return false;
     }
-
-    return valido;
+    return true;
 }
 
 function mostrarErro(idCampo, idErro, mensagem) {
@@ -740,38 +741,28 @@ async function aoEnviarFormulario(evento) {
     evento.preventDefault();
 
     if (!validarFormulario()) {
-        mensagemStatus.textContent = 'Verifique os campos destacados.';
-        mensagemStatus.className = 'mensagem-status erro-geral';
+        mostrarMensagemPerfil('Verifique os campos destacados.', 'erro-geral');
         return;
     }
 
     const dadosNovos = {
-        nome: document.getElementById('campoNome').value.trim(),
         email: document.getElementById('campoEmail').value.trim(),
-        cpf: document.getElementById('campoCpf').value.trim(),
         telefone: document.getElementById('campoTelefone').value.trim(),
-        tipo: document.getElementById('campoTipo').value
+        foto: fotoPendente !== undefined ? fotoPendente : dadosUsuario.foto
     };
 
     btnSalvarPerfil.disabled = true;
     btnSalvarPerfil.textContent = 'Salvando...';
-    mensagemStatus.textContent = '';
-    mensagemStatus.className = 'mensagem-status';
+    mostrarMensagemPerfil('');
 
     try {
-        const perfilAtualizado = await salvarPerfilNoServidor(dadosNovos);
-
-        mensagemStatus.textContent = 'Perfil atualizado com sucesso!';
-        mensagemStatus.className = 'mensagem-status sucesso';
-
-        const primeiroNome = perfilAtualizado.nome.split(' ')[0];
-        document.getElementById('saudacaoNome').textContent = `Olá, ${primeiroNome}! `;
-
+        await salvarPerfilNoServidor(dadosNovos);
+        fotoPendente = undefined;
+        atualizarSaudacao();
+        mostrarMensagemPerfil('Perfil atualizado com sucesso!', 'sucesso');
         setTimeout(fecharPerfil, 1200);
-
     } catch (erro) {
-        mensagemStatus.textContent = erro.message;
-        mensagemStatus.className = 'mensagem-status erro-geral';
+        mostrarMensagemPerfil(erro.message, 'erro-geral');
     } finally {
         btnSalvarPerfil.disabled = false;
         btnSalvarPerfil.textContent = 'Salvar alterações';
@@ -788,7 +779,7 @@ function iniciarPerfil() {
     document.getElementById('btnFecharPerfil').addEventListener('click', fecharPerfil);
     document.getElementById('btnCancelarPerfil').addEventListener('click', fecharPerfil);
     document.getElementById('btnSair').addEventListener('click', sairDaConta);
-    document.getElementById('sairDaConta').addEventListener('click', sairDaConta)
+    document.getElementById('sairDaConta').addEventListener('click', sairDaConta);
     overlayFundo.addEventListener('click', fecharPerfil);
 
     document.addEventListener('keydown', (e) => {
@@ -800,8 +791,10 @@ function iniciarPerfil() {
     document.getElementById('campoCpf').addEventListener('input', aplicarMascaraCpf);
     document.getElementById('campoTelefone').addEventListener('input', aplicarMascaraTelefone);
     document.getElementById('inputFoto').addEventListener('change', preverFoto);
-
     formPerfil.addEventListener('submit', aoEnviarFormulario);
+
+    // Atualiza nome/saudacao com os dados reais do banco
+    buscarPerfil().then(atualizarSaudacao).catch(function () { /* mostrado ao abrir o perfil */ });
 }
 
 
@@ -896,21 +889,16 @@ function iniciarCardsRapidos() {
 
 
 /*  CONTATOS */
-let listaContatos = [{
-        id: 1,
-        nome: 'Ana (Filha)',
-        telefone: '(11) 91234-5678',
-        tipo: 'familiar'
-    },
-    {
-        id: 2,
-        nome: 'Carlos',
-        telefone: '(11) 99876-5432',
-        tipo: 'cuidador'
-    }
-];
+// Enum TipoContato do back: Familiar=0, Cuidador=1, Medico=2, Outro=3
+const TIPOS_CONTATO = ['familiar', 'cuidador', 'medico', 'outro'];
+const ROTULOS_CONTATO = { familiar: 'Familiar', cuidador: 'Cuidador(a)', medico: 'Médico(a)', outro: 'Outro' };
 
-let proximoIdContato = 3;
+let listaContatos = [];
+
+function tipoContatoDaApi(t) {
+    if (typeof t === 'string') return t.toLowerCase();
+    return TIPOS_CONTATO[t] || 'outro';
+}
 
 function iniciarAbasContatos() {
     const abas = document.querySelectorAll('.contatos-abas .aba');
@@ -927,32 +915,31 @@ function iniciarAbasContatos() {
     });
 }
 
-function buscarContatos() {
-    return new Promise(resolve => {
-        setTimeout(() => resolve(listaContatos), 400);
-    });
+async function buscarContatos() {
+    const lista = await api.contatos();
+    listaContatos = lista.map(c => ({
+        id: c.id, nome: c.nome, telefone: c.telefone, tipo: tipoContatoDaApi(c.tipo)
+    }));
+    return listaContatos;
 }
 
 function salvarContatoNoServidor(contato) {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            const novoContato = {
-                id: proximoIdContato++,
-                ...contato
-            };
-            listaContatos.push(novoContato);
-            resolve(novoContato);
-        }, 700);
+    return api.criarContato({
+        nome: contato.nome,
+        telefone: contato.telefone,
+        tipo: TIPOS_CONTATO.indexOf(contato.tipo)
     });
 }
 
 function removerContatoNoServidor(id) {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            listaContatos = listaContatos.filter(c => c.id !== id);
-            resolve();
-        }, 400);
-    });
+    return api.excluirContato(id);
+}
+
+function criarItem(tag, classe, texto) {
+    const el = document.createElement(tag);
+    if (classe) el.className = classe;
+    if (texto !== undefined) el.textContent = texto; // textContent evita injecao de HTML
+    return el;
 }
 
 function renderizarContatos(contatos) {
@@ -960,30 +947,50 @@ function renderizarContatos(contatos) {
     lista.innerHTML = '';
 
     if (contatos.length === 0) {
-        lista.innerHTML = '<li class="mensagem-vazio">Você ainda não tem contatos cadastrados.</li>';
-        return;
+        lista.appendChild(criarItem('li', 'mensagem-vazio', 'Você ainda não tem contatos cadastrados.'));
     }
 
     contatos.forEach(contato => {
-        const li = document.createElement('li');
-        li.className = 'contato-item';
+        const li = criarItem('li', 'contato-item');
+        const info = criarItem('div', 'contato-info');
+        info.appendChild(criarItem('strong', '', contato.nome));
+        info.appendChild(criarItem('span', '', contato.telefone));
 
-        li.innerHTML = `
-            <div class="contato-info">
-                <strong>${contato.nome}</strong>
-                <span>${contato.telefone}</span>
-            </div>
-            <span class="contato-tipo">${contato.tipo}</span>
-            <button type="button" class="btn-remover-contato" data-id="${contato.id}">Remover</button>
-        `;
+        const botao = criarItem('button', 'btn-remover-contato', 'Remover');
+        botao.type = 'button';
+        botao.dataset.id = contato.id;
 
+        li.appendChild(info);
+        li.appendChild(criarItem('span', 'contato-tipo', ROTULOS_CONTATO[contato.tipo] || contato.tipo));
+        li.appendChild(botao);
         lista.appendChild(li);
     });
+
+    // Card "Contatos" do topo da pagina
+    const resumo = document.querySelector('.card-contatos .lista-contatos');
+    if (resumo) {
+        resumo.innerHTML = '';
+        if (contatos.length === 0) {
+            resumo.appendChild(criarItem('li', '', 'Nenhum contato ainda'));
+        }
+        contatos.slice(0, 3).forEach(contato => {
+            const li = document.createElement('li');
+            const b = criarItem('button', 'btn-contato', contato.nome + ' (' + (ROTULOS_CONTATO[contato.tipo] || contato.tipo) + ')');
+            b.type = 'button';
+            li.appendChild(b);
+            resumo.appendChild(li);
+        });
+    }
 }
 
 async function carregarContatos() {
-    const contatos = await buscarContatos();
-    renderizarContatos(contatos);
+    try {
+        await buscarContatos();
+    } catch (e) {
+        listaContatos = [];
+        mostrarStatus('mensagemStatusContato', e.message, 'erro');
+    }
+    renderizarContatos(listaContatos);
 }
 
 function iniciarRemocaoContatos() {
@@ -991,12 +998,17 @@ function iniciarRemocaoContatos() {
         const botao = evento.target.closest('.btn-remover-contato');
         if (!botao) return;
 
-        const id = Number(botao.dataset.id);
         botao.disabled = true;
         botao.textContent = 'Removendo...';
 
-        await removerContatoNoServidor(id);
-        renderizarContatos(listaContatos);
+        try {
+            await removerContatoNoServidor(Number(botao.dataset.id));
+            await carregarContatos();
+        } catch (e) {
+            botao.disabled = false;
+            botao.textContent = 'Remover';
+            mostrarStatus('mensagemStatusContato', e.message, 'erro');
+        }
     });
 }
 
@@ -1025,7 +1037,6 @@ function validarFormularioContato() {
 function iniciarFormularioContato() {
     const form = document.getElementById('formNovoContato');
     const btnSalvar = document.getElementById('btnSalvarContato');
-    const mensagem = document.getElementById('mensagemStatusContato');
 
     document.getElementById('novoContatoTelefone').addEventListener('input', aplicarMascaraTelefone);
 
@@ -1043,19 +1054,17 @@ function iniciarFormularioContato() {
         btnSalvar.disabled = true;
         btnSalvar.textContent = 'Adicionando...';
 
-        await salvarContatoNoServidor(contato);
-        renderizarContatos(listaContatos);
-
-        mensagem.textContent = 'Contato adicionado com sucesso!';
-        mensagem.className = 'mensagem-status sucesso';
-        form.reset();
-
-        btnSalvar.disabled = false;
-        btnSalvar.textContent = 'Adicionar contato';
-
-        setTimeout(() => {
-            mensagem.textContent = '';
-        }, 2000);
+        try {
+            await salvarContatoNoServidor(contato);
+            await carregarContatos();
+            form.reset();
+            mostrarStatus('mensagemStatusContato', 'Contato adicionado com sucesso!', 'sucesso');
+        } catch (e) {
+            mostrarStatus('mensagemStatusContato', e.message, 'erro');
+        } finally {
+            btnSalvar.disabled = false;
+            btnSalvar.textContent = 'Adicionar contato';
+        }
     });
 }
 
