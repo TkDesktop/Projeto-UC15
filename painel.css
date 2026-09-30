@@ -211,3 +211,24 @@
 @media (max-width: 420px) {
   .estat-grade { grid-template-columns: 1fr; }
 }
+
+
+@media (min-width: 769px) {
+  body.pagina-logado .nav-container {
+    flex-wrap: nowrap;
+  }
+
+  body.pagina-logado #menuNav {
+    flex-wrap: nowrap;
+    gap: clamp(12px, 1.8vw, 36px);
+  }
+
+  body.pagina-logado #menuNav li {
+    white-space: nowrap;
+  }
+
+  body.pagina-logado #menuNav a {
+    white-space: nowrap;
+    font-size: clamp(13px, 1.15vw, 19px);
+  }
+}

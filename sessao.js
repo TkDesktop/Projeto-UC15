@@ -1,6 +1,6 @@
 /* ==========================================================
-   sessao.js - mantem o login entre as paginas e protege o checkout.
-   Carregar DEPOIS do script.js em index.html e checkout.html:
+   sessao.js - login entre as paginas, checkout protegido e logo.
+   Carregar DEPOIS do script.js em index.html, logado.html e checkout.html:
    <script src="sessao.js"></script>
    Nao depende do api.js (le a sessao direto do localStorage).
    ========================================================== */
@@ -26,6 +26,25 @@
 
     function limparDestino() {
         try { sessionStorage.removeItem(CHAVE_DESTINO); } catch (e) { /* sem armazenamento */ }
+    }
+
+    /* ---------- LOGO: volta ao topo da pagina atual (home e painel) ---------- */
+    var logo = document.querySelector('nav .nav-container img') || document.querySelector('nav img');
+    if (logo) {
+        var voltarAoTopo = function () {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        logo.style.cursor = 'pointer';
+        logo.setAttribute('role', 'button');
+        logo.setAttribute('tabindex', '0');
+        logo.setAttribute('aria-label', 'Voltar ao topo da página');
+        logo.addEventListener('click', voltarAoTopo);
+        logo.addEventListener('keydown', function (evento) {
+            if (evento.key === 'Enter' || evento.key === ' ') {
+                evento.preventDefault();
+                voltarAoTopo();
+            }
+        });
     }
 
     /* ---------- HOME (index.html) ---------- */

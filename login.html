@@ -8,6 +8,45 @@
     <title>Login Medica+</title>
     <link rel="stylesheet" href="confirmar.css">
     <style>
+
+        #overlay-redefinir .form-redefinir button {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        margin: 12px 0 0;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+                        }
+
+/* "Salvar nova senha": afastado dos campos */
+        #overlay-redefinir .form-redefinir .btn-enviar {
+        margin-top: 20px;
+        }
+
+/* "Enviar um novo código": botão secundário, com contorno */
+        #overlay-redefinir #reenviar-redefinir {
+            color: #374151;
+            background: #ffffff;
+            border: 1.5px solid #c5cedd;
+        }
+        #overlay-redefinir #reenviar-redefinir:hover {
+        background: #f4f7fc;
+        }
+
+        /* "Cancelar": discreto, sem caixa */
+        #overlay-redefinir #cancelar-redefinir {
+        color: #6b7280;
+        background: transparent;
+        font-weight: 500;
+        border: 0;
+        }
+        #overlay-redefinir #cancelar-redefinir:hover {
+        color: #1f2937;
+        text-decoration: underline;
+        }
         /* Tela "Crie uma nova senha" (esqueci minha senha) */
         #overlay-redefinir label { display: block; margin: 12px 0 4px; text-align: left; font-size: 14px; }
         #overlay-redefinir input[type="password"] {
