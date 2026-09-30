@@ -114,6 +114,12 @@ const api = {
     confirmarEmail: (email, codigo) =>
         requisicao('/api/auth/confirmar-email', { metodo: 'POST', auth: false, corpo: { email, codigo } }),
 
+    // Recuperacao de senha (sem token): pede o codigo por e-mail e depois define a senha nova
+    esqueciSenha: (email) =>
+        requisicao('/api/auth/esqueci-senha', { metodo: 'POST', auth: false, corpo: { email } }),
+    redefinirSenha: (email, codigo, novaSenha) =>
+        requisicao('/api/auth/redefinir-senha', { metodo: 'POST', auth: false, corpo: { email, codigo, novaSenha } }),
+
     // Perfil
     perfil: () => requisicao('/api/usuarios/me'),
     atualizarPerfil: (dados) => requisicao('/api/usuarios/me', { metodo: 'PUT', corpo: dados }),
@@ -160,6 +166,5 @@ const api = {
 
     // Assinatura
     assinaturas: () => requisicao('/api/assinaturas'),
-    checkout: (dados) => requisicao('/api/assinaturas/checkout', { metodo: 'POST', corpo: dados }),
-    trocarPlano: (dados) => requisicao('/api/assinaturas/plano', { metodo: 'PUT', corpo: dados })
+    checkout: (dados) => requisicao('/api/assinaturas/checkout', { metodo: 'POST', corpo: dados })
 };

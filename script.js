@@ -140,24 +140,6 @@
     var nomePlano = params.get('plano') || 'Basic';
     var precoStr = params.get('preco') || '0,00';
 
-    if (!obterToken()) {
-        sessionStorage.setItem('medicaMaisRedirecionar', window.location.href);
-        window.location.href = 'login.html';
-        return;
-    }
-
-    var planoEnum = { 'essencial': 0, 'cuidado+': 1, 'cuidado total': 2 }[nomePlano.toLowerCase()];
-    if (planoEnum === undefined) planoEnum = 0;
-
-    // Contrata (1ª vez) ou troca de plano. metodo: 0 = Cartão, 1 = Pix
-    async function assinar(metodo) {
-        var perfil = await api.perfil();
-        var dto = { plano: planoEnum, metodoPagamento: metodo };
-        if (perfil.plano === null || perfil.plano === undefined) return api.checkout(dto);
-        if (perfil.plano === planoEnum) throw new Error('Você já possui este plano.');
-        return api.trocarPlano(dto);
-    }
-
     document.getElementById('resumo-plano').textContent = nomePlano;
     document.getElementById('resumo-preco').textContent = 'R$ ' + precoStr;
 
@@ -178,13 +160,7 @@
         gratisBotao.textContent = 'Ativar plano grátis';
         document.querySelector('.checkout').appendChild(gratisBotao);
         gratisBotao.addEventListener('click', function () {
-            gratisBotao.disabled = true;
-            assinar(0).then(function () {
-                mostrarSucesso('Plano ' + nomePlano + ' grátis ativado!');
-            }).catch(function (erro) {
-                gratisBotao.disabled = false;
-                alert(erro.message);
-            });
+            mostrarSucesso('Plano Basic grátis ativado!');
         });
     }
 
@@ -285,14 +261,11 @@
         btnPagar.textContent = 'Processando...';
         mostrarMsg(msgCartao, 'Processando pagamento, aguarde...', 'sucesso');
 
-        assinar(0).then(function () {
-            mostrarSucesso('Pagamento de R$ ' + precoStr + ' aprovado! Seu plano ' + nomePlano + ' já está ativo.');
-        }).catch(function (erro) {
-            mostrarMsg(msgCartao, erro.message, 'erro');
-        }).then(function () {
+        setTimeout(function () {
             btnPagar.disabled = false;
             btnPagar.textContent = 'Pagar R$ ' + precoStr;
-        });
+            mostrarSucesso('Pagamento de R$ ' + precoStr + ' aprovado! Seu plano ' + nomePlano + ' já está ativo.');
+        }, 2000);
     });
 
     /*  PIX */
@@ -322,14 +295,11 @@
         btnConfirmar.textContent = 'Verificando pagamento...';
         mostrarMsg(msgPix, 'Confirmando com o banco, aguarde...', 'sucesso');
 
-        assinar(1).then(function () {
-            mostrarSucesso('Pix de R$ ' + precoStr + ' confirmado! Seu plano ' + nomePlano + ' já está ativo.');
-        }).catch(function (erro) {
-            mostrarMsg(msgPix, erro.message, 'erro');
-        }).then(function () {
+        setTimeout(function () {
             btnConfirmar.disabled = false;
             btnConfirmar.textContent = 'Já paguei';
-        });
+            mostrarSucesso('Pix de R$ ' + precoStr + ' confirmado! Seu plano ' + nomePlano + ' já está ativo.');
+        }, 2500);
     });
 
     /*  OVERLAY DE SUCESSO */
@@ -399,10 +369,19 @@ let dadosPressao = [];
 /*  GRÁFICO + FILTRO + BADGES */
 let graficoPressao = null;
 
+const COR_MEDIDA = { alta: '#e63946', baixa: '#2d7ff9', normal: '#2e9e3f' };
+
+// Regra unica usada no grafico, nos picos e nas estatisticas
+function classificarMedida(item) {
+    if (item.valor > 140 || item.diastolica > 90) return 'alta';
+    if (item.valor < 90 || item.diastolica < 60) return 'baixa';
+    return 'normal';
+}
+
 function corDoPonto(valor) {
-    if (valor > 140) return '#e63946';
-    if (valor < 90) return '#2d7ff9';
-    return '#2e9e3f';
+    if (valor > 140) return COR_MEDIDA.alta;
+    if (valor < 90) return COR_MEDIDA.baixa;
+    return COR_MEDIDA.normal;
 }
 
 function filtrarPorPeriodo(dataInicio, dataFim) {
@@ -416,8 +395,9 @@ function renderizarGrafico(dados) {
     const ctx = document.getElementById('pressaoChart');
 
     const labels = dados.map(item => formatarDataCurta(new Date(item.data)));
-    const valores = dados.map(item => item.valor);
-    const cores = dados.map(item => corDoPonto(item.valor));
+    const sistolicas = dados.map(item => item.valor);
+    const diastolicas = dados.map(item => item.diastolica);
+    const cores = dados.map(item => COR_MEDIDA[classificarMedida(item)]);
 
     if (graficoPressao) {
         graficoPressao.destroy();
@@ -428,8 +408,8 @@ function renderizarGrafico(dados) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Sistólica (máx.)',
-                data: valores,
+                label: 'Sistólica (mmHg)',
+                data: sistolicas,
                 borderColor: '#2e9e3f',
                 borderWidth: 2,
                 pointBackgroundColor: cores,
@@ -439,14 +419,14 @@ function renderizarGrafico(dados) {
                 tension: 0.4,
                 fill: false
             }, {
-                label: 'Diastólica (mín.)',
-                data: dados.map(item => item.diastolica),
-                borderColor: '#3f5eab',
+                label: 'Diastólica (mmHg)',
+                data: diastolicas,
+                borderColor: '#7a8ba6',
+                borderDash: [6, 4],
                 borderWidth: 2,
-                pointBackgroundColor: '#3f5eab',
-                pointBorderColor: '#3f5eab',
+                pointBackgroundColor: '#7a8ba6',
+                pointBorderColor: '#7a8ba6',
                 pointRadius: 3,
-                pointHoverRadius: 5,
                 tension: 0.4,
                 fill: false
             }]
@@ -455,7 +435,8 @@ function renderizarGrafico(dados) {
             responsive: true,
             plugins: {
                 legend: {
-                    display: true
+                    display: true,
+                    position: 'bottom'
                 }
             },
             scales: {
@@ -481,16 +462,17 @@ function atualizarBadges(dados) {
         return;
     }
 
-    const picoAlto = dados.reduce((maior, atual) => atual.valor > maior.valor ? atual : maior, dados[0]);
-    const picoBaixo = dados.reduce((menor, atual) => atual.valor < menor.valor ? atual : menor, dados[0]);
+    const altas = dados.filter(d => classificarMedida(d) === 'alta');
+    const baixas = dados.filter(d => classificarMedida(d) === 'baixa');
 
-    const temPicoAlto = picoAlto.valor > 140;
-    const temPicoBaixo = picoBaixo.valor < 90;
+    if (altas.length) {
+        listaBadges.appendChild(criarBadge(altas.reduce((a, b) => b.valor > a.valor ? b : a), 'alto'));
+    }
+    if (baixas.length) {
+        listaBadges.appendChild(criarBadge(baixas.reduce((a, b) => b.valor < a.valor ? b : a), 'baixo'));
+    }
 
-    if (temPicoAlto) listaBadges.appendChild(criarBadge(picoAlto, 'alto'));
-    if (temPicoBaixo) listaBadges.appendChild(criarBadge(picoBaixo, 'baixo'));
-
-    statusFiltro.textContent = (!temPicoAlto && !temPicoBaixo) ?
+    statusFiltro.textContent = (!altas.length && !baixas.length) ?
         'Nesse período sua pressão se manteve dentro da faixa normal 👍' :
         '';
 }
@@ -499,16 +481,67 @@ function criarBadge(item, tipo) {
     const li = document.createElement('li');
     li.className = `badge badge-${tipo}`;
 
-    const dataFormatada = formatarDataCompleta(new Date(item.data));
     const textoTag = tipo === 'alto' ? 'Pico de pressão alta' : 'Pico de pressão baixa';
-
-    li.innerHTML = `
-        <span>${dataFormatada}</span>
-        <p>${textoTag}</p>
-        <strong>${item.valor} mmHg</strong>
-    `;
+    li.appendChild(criarItem('span', '', formatarDataCompleta(new Date(item.data))));
+    li.appendChild(criarItem('p', '', textoTag));
+    li.appendChild(criarItem('strong', '', `${item.valor}/${item.diastolica} mmHg`));
 
     return li;
+}
+
+function atualizarEstatisticas(dados) {
+    let painel = document.getElementById('estatisticasPressao');
+    if (!painel) {
+        painel = document.createElement('div');
+        painel.id = 'estatisticasPressao';
+        painel.className = 'estatisticas';
+        const alvo = document.querySelector('.badges');
+        alvo.parentNode.insertBefore(painel, alvo);
+    }
+    painel.innerHTML = '';
+
+    if (dados.length === 0) {
+        painel.appendChild(criarItem('p', 'estat-vazio', 'Sem medições no período para avaliar.'));
+        return;
+    }
+
+    const n = dados.length;
+    const media = campo => Math.round(dados.reduce((soma, d) => soma + d[campo], 0) / n);
+    const mediaSis = media('valor');
+    const mediaDia = media('diastolica');
+    const maior = dados.reduce((a, b) => b.valor > a.valor ? b : a);
+    const menor = dados.reduce((a, b) => b.valor < a.valor ? b : a);
+    const normais = dados.filter(d => classificarMedida(d) === 'normal').length;
+    const altas = dados.filter(d => classificarMedida(d) === 'alta').length;
+    const baixas = dados.filter(d => classificarMedida(d) === 'baixa').length;
+    const classeMedia = classificarMedida({ valor: mediaSis, diastolica: mediaDia });
+
+    const textos = {
+        normal: 'A média do período está dentro da faixa normal.',
+        alta: 'A média do período está acima do ideal. Converse com um profissional de saúde.',
+        baixa: 'A média do período está abaixo do ideal. Converse com um profissional de saúde.'
+    };
+
+    const itens = [
+        ['Medições', String(n)],
+        ['Média', `${mediaSis}/${mediaDia} mmHg`],
+        ['Maior sistólica', `${maior.valor}/${maior.diastolica} mmHg`],
+        ['Menor sistólica', `${menor.valor}/${menor.diastolica} mmHg`],
+        ['Na faixa normal', `${Math.round(normais * 100 / n)}% (${normais} de ${n})`],
+        ['Alertas', `${altas} alta(s) · ${baixas} baixa(s)`]
+    ];
+
+    const grade = criarItem('div', 'estat-grade');
+    itens.forEach(([rotulo, valor]) => {
+        const caixa = criarItem('div', 'estat-item');
+        caixa.appendChild(criarItem('span', 'estat-rotulo', rotulo));
+        caixa.appendChild(criarItem('strong', 'estat-valor', valor));
+        grade.appendChild(caixa);
+    });
+    painel.appendChild(grade);
+
+    painel.appendChild(criarItem('p', 'estat-avaliacao estat-' + classeMedia, textos[classeMedia]));
+    painel.appendChild(criarItem('p', 'estat-nota', 'Informação de apoio, não substitui avaliação médica.'));
 }
 
 function atualizarUltimaAtualizacao(dados) {
@@ -533,9 +566,9 @@ function aplicarFiltro() {
     const dadosFiltrados = filtrarPorPeriodo(dataInicio, dataFim);
 
     renderizarGrafico(dadosFiltrados);
-    renderizarListaPressao(dadosFiltrados);
     atualizarBadges(dadosFiltrados);
     atualizarUltimaAtualizacao(dadosFiltrados);
+    atualizarEstatisticas(dadosFiltrados);
 }
 
 
@@ -558,16 +591,8 @@ function formatarDataCurta(data) {
 
 
 /*  PERFIL */
-const CHAVE_USUARIOS = 'medicaMaisUsuarios';
-const CHAVE_LOGADO = 'medicaMaisUsuarioLogado';
-
-function lerJson(chave, padrao) {
-    try {
-        return JSON.parse(localStorage.getItem(chave)) || padrao;
-    } catch (e) {
-        return padrao;
-    }
-}
+const TIPOS_USUARIO = ['paciente', 'cuidador', 'parente'];
+const CHAVE_SESSAO_USUARIO = 'medicaMaisUsuarioLogado';
 
 function formatarCpf(valor) {
     const numeros = String(valor || '').replace(/\D/g, '').slice(0, 11);
@@ -585,55 +610,35 @@ function formatarTelefone(valor) {
     return numeros.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2');
 }
 
-const PLANOS_NOME = ['Essencial (grátis)', 'Cuidado+', 'Cuidado Total'];
-const TIPOS_USUARIO = ['paciente', 'cuidador', 'parente'];
+function tipoUsuarioDaApi(t) {
+    if (typeof t === 'string') return t.toLowerCase();
+    return TIPOS_USUARIO[t] || 'paciente';
+}
 
-// Converte o usuário devolvido pela API no formato que o formulário de perfil usa
-function perfilDaApi(u) {
+// Converte o JSON da API (UsuarioRespostaDto) para o formato usado nos campos da tela
+function usuarioDaApi(u) {
     u = u || {};
     return {
         nome: u.nome || '',
         email: u.email || '',
         cpf: formatarCpf(u.cpf),
         telefone: formatarTelefone(u.telefone),
-        tipo: TIPOS_USUARIO[u.tipoUsuario] || 'paciente',
-        plano: (u.plano === null || u.plano === undefined) ? 'Sem plano contratado' : PLANOS_NOME[u.plano],
+        tipo: tipoUsuarioDaApi(u.tipoUsuario),
+        plano: (u.plano !== null && u.plano !== undefined) ? 'Plano ativo' : 'Nenhum plano contratado',
         foto: u.fotoUrl || null
     };
 }
 
-function carregarUsuarioLogado() {
-    return perfilDaApi(lerJson(CHAVE_LOGADO, null));
-}
-
-let dadosUsuario = carregarUsuarioLogado();
-
-function gravarUsuarioLogado(dados) {
-    const usuarios = lerJson(CHAVE_USUARIOS, []);
-    const emailAntigo = (lerJson(CHAVE_LOGADO, {}) || {}).email;
-
-    const indice = usuarios.findIndex(function (u) {
-        return u.email === emailAntigo;
-    });
-
-    if (indice >= 0) {
-        usuarios[indice] = Object.assign({}, usuarios[indice], {
-            nome: dados.nome,
-            email: dados.email.toLowerCase(),
-            cpf: dados.cpf,
-            telefone: dados.telefone,
-            papel: dados.tipo,
-            foto: dados.foto || null
-        });
-        localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(usuarios));
+function lerSessaoUsuario() {
+    try {
+        return JSON.parse(localStorage.getItem(CHAVE_SESSAO_USUARIO)) || {};
+    } catch (e) {
+        return {};
     }
-
-    localStorage.setItem(CHAVE_LOGADO, JSON.stringify({
-        nome: dados.nome,
-        email: dados.email.toLowerCase(),
-        papel: dados.tipo
-    }));
 }
+
+let dadosUsuario = usuarioDaApi(lerSessaoUsuario());
+let fotoPendente; // undefined = a foto nao mudou
 
 function atualizarSaudacao() {
     const titulo = document.getElementById('saudacaoNome');
@@ -641,6 +646,12 @@ function atualizarSaudacao() {
 
     const primeiroNome = dadosUsuario.nome ? dadosUsuario.nome.split(' ')[0] : '';
     titulo.textContent = primeiroNome ? 'Olá, ' + primeiroNome + '!' : 'Olá!';
+
+    const grafico = document.getElementById('pressaoChart');
+    if (grafico) {
+        grafico.setAttribute('aria-label',
+            'Gráfico da variação da pressão arterial' + (primeiroNome ? ' de ' + primeiroNome : ''));
+    }
 }
 
 const overlay = document.getElementById('perfilOverlay');
@@ -650,46 +661,68 @@ const btnSalvarPerfil = document.getElementById('btnSalvarPerfil');
 const mensagemStatus = document.getElementById('mensagemStatus');
 
 async function buscarPerfil() {
-    try {
-        const u = await api.perfil();
-        localStorage.setItem(CHAVE_LOGADO, JSON.stringify(u));
-        dadosUsuario = perfilDaApi(u);
-    } catch (e) { /* sem conexão: usa os dados da sessão */ }
+    const u = await api.perfil();
+    localStorage.setItem(CHAVE_SESSAO_USUARIO, JSON.stringify(u));
+    dadosUsuario = usuarioDaApi(u);
     return dadosUsuario;
 }
 
-// A API só permite alterar telefone, e-mail e foto (nome, CPF e tipo são fixos).
-async function salvarPerfilNoServidor(dadosNovos) {
+// A API so aceita telefone, email e fotoUrl no PUT /api/usuarios/me
+async function salvarPerfilNoServidor(novos) {
     const u = await api.atualizarPerfil({
-        telefone: dadosNovos.telefone,
-        email: dadosNovos.email,
-        fotoUrl: dadosUsuario.foto || null
+        telefone: novos.telefone,
+        email: novos.email,
+        fotoUrl: novos.foto
     });
-    localStorage.setItem(CHAVE_LOGADO, JSON.stringify(u));
-    dadosUsuario = perfilDaApi(u);
+    localStorage.setItem(CHAVE_SESSAO_USUARIO, JSON.stringify(u));
+    dadosUsuario = usuarioDaApi(u);
     return dadosUsuario;
+}
+
+function mostrarMensagemPerfil(texto, classe) {
+    mensagemStatus.textContent = texto;
+    mensagemStatus.className = 'mensagem-status ' + (classe || '');
 }
 
 async function abrirPerfil() {
     overlay.classList.add('aberto');
     overlay.setAttribute('aria-hidden', 'false');
-    mensagemStatus.textContent = '';
-    mensagemStatus.className = 'mensagem-status';
+    mostrarMensagemPerfil('');
+    fotoPendente = undefined;
 
-    const perfil = await buscarPerfil();
-    preencherFormulario(perfil);
+    preencherFormulario(dadosUsuario);
+    try {
+        preencherFormulario(await buscarPerfil());
+        atualizarSaudacao();
+    } catch (erro) {
+        mostrarMensagemPerfil(erro.message, 'erro-geral');
+    }
 
-    document.getElementById('campoNome').focus();
+    document.getElementById('campoTelefone').focus();
 }
 
-function preencherFormulario(perfil) {
-    document.getElementById('campoNome').value = perfil.nome;
-    document.getElementById('campoEmail').value = perfil.email;
-    document.getElementById('campoCpf').value = perfil.cpf;
-    document.getElementById('campoTelefone').value = perfil.telefone;
-    document.getElementById('campoTipo').value = perfil.tipo;
-    document.getElementById('campoPlano').textContent = perfil.plano;
-    document.getElementById('fotoPreview').src = perfil.foto || 'img/avatar.png';
+function preencherFormulario(p) {
+    document.getElementById('campoNome').value = p.nome;
+    document.getElementById('campoEmail').value = p.email;
+    document.getElementById('campoCpf').value = p.cpf;
+    document.getElementById('campoTelefone').value = p.telefone;
+    document.getElementById('campoTipo').value = p.tipo;
+    document.getElementById('campoPlano').textContent = p.plano;
+
+    const foto = document.getElementById('fotoPreview');
+    foto.src = p.foto || 'img/avatar.png';
+    foto.alt = 'Foto de perfil' + (p.nome ? ' de ' + p.nome : '');
+
+    // A API nao permite alterar estes dados por aqui
+    ['campoNome', 'campoEmail', 'campoCpf'].forEach(function (id) {
+        const el = document.getElementById(id);
+        el.readOnly = true;
+        el.title = 'Este dado não pode ser alterado por aqui.';
+        el.style.background = '#f1f1f1';
+    });
+    const tipo = document.getElementById('campoTipo');
+    tipo.disabled = true;
+    tipo.style.background = '#f1f1f1';
 }
 
 function fecharPerfil() {
@@ -705,81 +738,68 @@ function sairDaConta() {
 }
 
 function aplicarMascaraCpf(evento) {
-    let numeros = evento.target.value.replace(/\D/g, '');
-    numeros = numeros.slice(0, 11);
-
-    numeros = numeros.replace(/(\d{3})(\d)/, '$1.$2');
-    numeros = numeros.replace(/(\d{3})(\d)/, '$1.$2');
-    numeros = numeros.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-
-    evento.target.value = numeros;
+    evento.target.value = formatarCpf(evento.target.value);
 }
 
 function aplicarMascaraTelefone(evento) {
-    let numeros = evento.target.value.replace(/\D/g, '');
-    numeros = numeros.slice(0, 11);
-
-    numeros = numeros.replace(/(\d{2})(\d)/, '($1) $2');
-    numeros = numeros.replace(/(\d{5})(\d{1,4})$/, '$1-$2');
-
-    evento.target.value = numeros;
+    evento.target.value = formatarTelefone(evento.target.value);
 }
 
-function preverFoto(evento) {
-    const arquivo = evento.target.files[0];
+// Reduz a foto (max. 256 px, JPEG) para caber no banco como texto
+function reduzirImagem(arquivo, lado) {
+    lado = lado || 256;
+    return new Promise(function (resolve, reject) {
+        const leitor = new FileReader();
+        leitor.onerror = function () { reject(new Error('Não foi possível ler a imagem.')); };
+        leitor.onload = function () {
+            const img = new Image();
+            img.onerror = function () { reject(new Error('Arquivo de imagem inválido.')); };
+            img.onload = function () {
+                const escala = Math.min(1, lado / Math.max(img.width, img.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(img.width * escala));
+                canvas.height = Math.max(1, Math.round(img.height * escala));
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.src = leitor.result;
+        };
+        leitor.readAsDataURL(arquivo);
+    });
+}
+
+async function preverFoto(evento) {
+    const entrada = evento.target;
+    const arquivo = entrada.files[0];
     if (!arquivo) return;
 
-    const leitor = new FileReader();
-    leitor.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-            // reduz para 256x256 para a foto ficar leve no banco
-            const lado = 256;
-            const canvas = document.createElement('canvas');
-            canvas.width = lado;
-            canvas.height = lado;
-            const corte = Math.min(img.width, img.height);
-            canvas.getContext('2d').drawImage(img, (img.width - corte) / 2, (img.height - corte) / 2, corte, corte, 0, 0, lado, lado);
-            const resultado = canvas.toDataURL('image/jpeg', 0.8);
-            document.getElementById('fotoPreview').src = resultado;
-            dadosUsuario.foto = resultado;
-        };
-        img.src = leitor.result;
-    };
-    leitor.readAsDataURL(arquivo);
+    if (!/^image\/(png|jpeg)$/.test(arquivo.type)) {
+        mostrarMensagemPerfil('Use uma imagem PNG ou JPG.', 'erro-geral');
+        entrada.value = '';
+        return;
+    }
+
+    try {
+        fotoPendente = await reduzirImagem(arquivo);
+        document.getElementById('fotoPreview').src = fotoPendente;
+        mostrarMensagemPerfil('Foto escolhida. Clique em "Salvar alterações" para guardá-la.');
+    } catch (erro) {
+        mostrarMensagemPerfil(erro.message, 'erro-geral');
+    }
+    entrada.value = '';
 }
 
 function validarFormulario() {
     limparErros();
-    let valido = true;
-
-    const nome = document.getElementById('campoNome').value.trim();
-    const email = document.getElementById('campoEmail').value.trim();
-    const cpf = document.getElementById('campoCpf').value.trim();
     const telefone = document.getElementById('campoTelefone').value.trim();
-
-    if (nome.length < 3) {
-        mostrarErro('campoNome', 'erroNome', 'Digite o nome completo.');
-        valido = false;
-    }
-
-    const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!regexEmail.test(email)) {
-        mostrarErro('campoEmail', 'erroEmail', 'Digite um e-mail válido.');
-        valido = false;
-    }
-
-    if (cpf.replace(/\D/g, '').length !== 11) {
-        mostrarErro('campoCpf', 'erroCpf', 'CPF deve ter 11 números.');
-        valido = false;
-    }
-
     if (telefone.replace(/\D/g, '').length < 10) {
         mostrarErro('campoTelefone', 'erroTelefone', 'Telefone incompleto.');
-        valido = false;
+        return false;
     }
-
-    return valido;
+    return true;
 }
 
 function mostrarErro(idCampo, idErro, mensagem) {
@@ -796,40 +816,28 @@ async function aoEnviarFormulario(evento) {
     evento.preventDefault();
 
     if (!validarFormulario()) {
-        mensagemStatus.textContent = 'Verifique os campos destacados.';
-        mensagemStatus.className = 'mensagem-status erro-geral';
+        mostrarMensagemPerfil('Verifique os campos destacados.', 'erro-geral');
         return;
     }
 
     const dadosNovos = {
-        nome: document.getElementById('campoNome').value.trim(),
         email: document.getElementById('campoEmail').value.trim(),
-        cpf: document.getElementById('campoCpf').value.trim(),
         telefone: document.getElementById('campoTelefone').value.trim(),
-        tipo: document.getElementById('campoTipo').value
+        foto: fotoPendente !== undefined ? fotoPendente : dadosUsuario.foto
     };
 
     btnSalvarPerfil.disabled = true;
     btnSalvarPerfil.textContent = 'Salvando...';
-    mensagemStatus.textContent = '';
-    mensagemStatus.className = 'mensagem-status';
+    mostrarMensagemPerfil('');
 
     try {
-        const emailAntes = dadosUsuario.email;
-        const perfilAtualizado = await salvarPerfilNoServidor(dadosNovos);
-        const emailMudou = perfilAtualizado.email !== emailAntes;
-
-        mensagemStatus.textContent = emailMudou ? 'Perfil atualizado! Enviamos um código para o novo e-mail: confirme-o na tela de login antes do próximo acesso.' : 'Perfil atualizado com sucesso!';
-        mensagemStatus.className = 'mensagem-status sucesso';
-
-        const primeiroNome = perfilAtualizado.nome.split(' ')[0];
-        document.getElementById('saudacaoNome').textContent = `Olá, ${primeiroNome}! `;
-
-        setTimeout(fecharPerfil, emailMudou ? 4500 : 1200);
-
+        await salvarPerfilNoServidor(dadosNovos);
+        fotoPendente = undefined;
+        atualizarSaudacao();
+        mostrarMensagemPerfil('Perfil atualizado com sucesso!', 'sucesso');
+        setTimeout(fecharPerfil, 1200);
     } catch (erro) {
-        mensagemStatus.textContent = erro.message;
-        mensagemStatus.className = 'mensagem-status erro-geral';
+        mostrarMensagemPerfil(erro.message, 'erro-geral');
     } finally {
         btnSalvarPerfil.disabled = false;
         btnSalvarPerfil.textContent = 'Salvar alterações';
@@ -846,7 +854,7 @@ function iniciarPerfil() {
     document.getElementById('btnFecharPerfil').addEventListener('click', fecharPerfil);
     document.getElementById('btnCancelarPerfil').addEventListener('click', fecharPerfil);
     document.getElementById('btnSair').addEventListener('click', sairDaConta);
-    document.getElementById('sairDaConta').addEventListener('click', sairDaConta)
+    document.getElementById('sairDaConta').addEventListener('click', sairDaConta);
     overlayFundo.addEventListener('click', fecharPerfil);
 
     document.addEventListener('keydown', (e) => {
@@ -858,16 +866,10 @@ function iniciarPerfil() {
     document.getElementById('campoCpf').addEventListener('input', aplicarMascaraCpf);
     document.getElementById('campoTelefone').addEventListener('input', aplicarMascaraTelefone);
     document.getElementById('inputFoto').addEventListener('change', preverFoto);
-
     formPerfil.addEventListener('submit', aoEnviarFormulario);
 
-    // A API não permite alterar estes dados
-    ['campoNome', 'campoCpf'].forEach(id => {
-        const campo = document.getElementById(id);
-        campo.readOnly = true;
-        campo.title = 'Este dado não pode ser alterado.';
-    });
-    document.getElementById('campoTipo').disabled = true;
+    // Atualiza nome/saudacao com os dados reais do banco
+    buscarPerfil().then(atualizarSaudacao).catch(function () { /* mostrado ao abrir o perfil */ });
 }
 
 
@@ -962,12 +964,15 @@ function iniciarCardsRapidos() {
 
 
 /*  CONTATOS */
-let listaContatos = [];
+// Enum TipoContato do back: Familiar=0, Cuidador=1, Medico=2, Outro=3
 const TIPOS_CONTATO = ['familiar', 'cuidador', 'medico', 'outro'];
-const ROTULOS_CONTATO = ['Familiar', 'Cuidador(a)', 'Médico(a)', 'Outro'];
+const ROTULOS_CONTATO = { familiar: 'Familiar', cuidador: 'Cuidador(a)', medico: 'Médico(a)', outro: 'Outro' };
 
-function escaparHtml(texto) {
-    return String(texto).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let listaContatos = [];
+
+function tipoContatoDaApi(t) {
+    if (typeof t === 'string') return t.toLowerCase();
+    return TIPOS_CONTATO[t] || 'outro';
 }
 
 function iniciarAbasContatos() {
@@ -986,79 +991,81 @@ function iniciarAbasContatos() {
 }
 
 async function buscarContatos() {
-    try {
-        const lista = await api.contatos();
-        listaContatos = lista.map(c => ({ id: c.id, nome: c.nome, telefone: c.telefone, tipo: c.tipo }));
-    } catch (e) {
-        listaContatos = [];
-        mostrarStatus('mensagemStatusContato', e.message, 'erro');
-    }
+    const lista = await api.contatos();
+    listaContatos = lista.map(c => ({
+        id: c.id, nome: c.nome, telefone: c.telefone, tipo: tipoContatoDaApi(c.tipo)
+    }));
     return listaContatos;
 }
 
-async function salvarContatoNoServidor(contato) {
-    const indice = TIPOS_CONTATO.indexOf(contato.tipo);
-    const c = await api.criarContato({ nome: contato.nome, telefone: contato.telefone, tipo: indice < 0 ? 3 : indice });
-    const novo = { id: c.id, nome: c.nome, telefone: c.telefone, tipo: c.tipo };
-    listaContatos.push(novo);
-    return novo;
-}
-
-async function removerContatoNoServidor(id) {
-    await api.excluirContato(id);
-    listaContatos = listaContatos.filter(c => c.id !== id);
-}
-
-// Card resumido no topo do painel (até 3 contatos)
-function atualizarResumoContatos(contatos) {
-    const ul = document.querySelector('.card-contatos .lista-contatos');
-    if (!ul) return;
-    ul.innerHTML = '';
-    if (!contatos.length) {
-        ul.innerHTML = '<li><span>Nenhum contato ainda</span></li>';
-        return;
-    }
-    contatos.slice(0, 3).forEach(c => {
-        const li = document.createElement('li');
-        const botao = document.createElement('button');
-        botao.type = 'button';
-        botao.className = 'btn-contato';
-        botao.textContent = c.nome;
-        li.appendChild(botao);
-        ul.appendChild(li);
+function salvarContatoNoServidor(contato) {
+    return api.criarContato({
+        nome: contato.nome,
+        telefone: contato.telefone,
+        tipo: TIPOS_CONTATO.indexOf(contato.tipo)
     });
 }
 
+function removerContatoNoServidor(id) {
+    return api.excluirContato(id);
+}
+
+function criarItem(tag, classe, texto) {
+    const el = document.createElement(tag);
+    if (classe) el.className = classe;
+    if (texto !== undefined) el.textContent = texto; // textContent evita injecao de HTML
+    return el;
+}
+
 function renderizarContatos(contatos) {
-    atualizarResumoContatos(contatos);
     const lista = document.getElementById('listaContatosCompleta');
     lista.innerHTML = '';
 
     if (contatos.length === 0) {
-        lista.innerHTML = '<li class="mensagem-vazio">Você ainda não tem contatos cadastrados.</li>';
-        return;
+        lista.appendChild(criarItem('li', 'mensagem-vazio', 'Você ainda não tem contatos cadastrados.'));
     }
 
     contatos.forEach(contato => {
-        const li = document.createElement('li');
-        li.className = 'contato-item';
+        const li = criarItem('li', 'contato-item');
+        const info = criarItem('div', 'contato-info');
+        info.appendChild(criarItem('strong', '', contato.nome));
+        info.appendChild(criarItem('span', '', contato.telefone));
 
-        li.innerHTML = `
-            <div class="contato-info">
-                <strong>${escaparHtml(contato.nome)}</strong>
-                <span>${escaparHtml(contato.telefone)}</span>
-            </div>
-            <span class="contato-tipo">${ROTULOS_CONTATO[contato.tipo] || 'Outro'}</span>
-            <button type="button" class="btn-remover-contato" data-id="${contato.id}">Remover</button>
-        `;
+        const botao = criarItem('button', 'btn-remover-contato', 'Remover');
+        botao.type = 'button';
+        botao.dataset.id = contato.id;
 
+        li.appendChild(info);
+        li.appendChild(criarItem('span', 'contato-tipo', ROTULOS_CONTATO[contato.tipo] || contato.tipo));
+        li.appendChild(botao);
         lista.appendChild(li);
     });
+
+    // Card "Contatos" do topo da pagina
+    const resumo = document.querySelector('.card-contatos .lista-contatos');
+    if (resumo) {
+        resumo.innerHTML = '';
+        if (contatos.length === 0) {
+            resumo.appendChild(criarItem('li', '', 'Nenhum contato ainda'));
+        }
+        contatos.slice(0, 3).forEach(contato => {
+            const li = document.createElement('li');
+            const b = criarItem('button', 'btn-contato', contato.nome + ' (' + (ROTULOS_CONTATO[contato.tipo] || contato.tipo) + ')');
+            b.type = 'button';
+            li.appendChild(b);
+            resumo.appendChild(li);
+        });
+    }
 }
 
 async function carregarContatos() {
-    const contatos = await buscarContatos();
-    renderizarContatos(contatos);
+    try {
+        await buscarContatos();
+    } catch (e) {
+        listaContatos = [];
+        mostrarStatus('mensagemStatusContato', e.message, 'erro');
+    }
+    renderizarContatos(listaContatos);
 }
 
 function iniciarRemocaoContatos() {
@@ -1066,16 +1073,17 @@ function iniciarRemocaoContatos() {
         const botao = evento.target.closest('.btn-remover-contato');
         if (!botao) return;
 
-        const id = Number(botao.dataset.id);
         botao.disabled = true;
         botao.textContent = 'Removendo...';
 
         try {
-            await removerContatoNoServidor(id);
-        } catch (erro) {
-            alert(erro.message);
+            await removerContatoNoServidor(Number(botao.dataset.id));
+            await carregarContatos();
+        } catch (e) {
+            botao.disabled = false;
+            botao.textContent = 'Remover';
+            mostrarStatus('mensagemStatusContato', e.message, 'erro');
         }
-        renderizarContatos(listaContatos);
     });
 }
 
@@ -1104,7 +1112,6 @@ function validarFormularioContato() {
 function iniciarFormularioContato() {
     const form = document.getElementById('formNovoContato');
     const btnSalvar = document.getElementById('btnSalvarContato');
-    const mensagem = document.getElementById('mensagemStatusContato');
 
     document.getElementById('novoContatoTelefone').addEventListener('input', aplicarMascaraTelefone);
 
@@ -1124,21 +1131,15 @@ function iniciarFormularioContato() {
 
         try {
             await salvarContatoNoServidor(contato);
-            renderizarContatos(listaContatos);
-            mensagem.textContent = 'Contato adicionado com sucesso!';
-            mensagem.className = 'mensagem-status sucesso';
+            await carregarContatos();
             form.reset();
-        } catch (erro) {
-            mensagem.textContent = erro.message;
-            mensagem.className = 'mensagem-status erro';
+            mostrarStatus('mensagemStatusContato', 'Contato adicionado com sucesso!', 'sucesso');
+        } catch (e) {
+            mostrarStatus('mensagemStatusContato', e.message, 'erro');
+        } finally {
+            btnSalvar.disabled = false;
+            btnSalvar.textContent = 'Adicionar contato';
         }
-
-        btnSalvar.disabled = false;
-        btnSalvar.textContent = 'Adicionar contato';
-
-        setTimeout(() => {
-            mensagem.textContent = '';
-        }, 2000);
     });
 }
 
@@ -1173,7 +1174,6 @@ async function carregarVisita() {
         visitaAtual = null; // sem visita futura
     }
     atualizarVisualVisita();
-    await carregarHistoricoVisitas();
 }
 
 function iniciarVisitas() {
@@ -1276,13 +1276,6 @@ function renderizarTimelineHumor(dados) {
             <span class="data">${dia}/${mes}<br>${hora}:${String(data.getMinutes()).padStart(2, '0')}</span>
         `;
 
-        const excluir = document.createElement('button');
-        excluir.type = 'button';
-        excluir.className = 'btn-excluir-humor';
-        excluir.dataset.id = item.id;
-        excluir.setAttribute('aria-label', 'Excluir este registro de humor');
-        excluir.textContent = '×';
-        div.appendChild(excluir);
         container.appendChild(div);
     });
 }
@@ -1412,92 +1405,6 @@ function iniciarBotoesHumor() {
 }
 
 
-/*  REGISTROS: LISTA, EXCLUSÃO E HISTÓRICO */
-const STATUS_VISITA = ['Agendada', 'Reagendada', 'Concluída', 'Cancelada'];
-
-function renderizarListaPressao(dados) {
-    const ul = document.getElementById('listaPressao');
-    if (!ul) return;
-    ul.innerHTML = '';
-    if (!dados.length) {
-        ul.innerHTML = '<li class="mensagem-vazio">Nenhum registro nesse período.</li>';
-        return;
-    }
-    [...dados].sort((a, b) => new Date(b.data) - new Date(a.data)).forEach(item => {
-        const li = document.createElement('li');
-        const texto = document.createElement('span');
-        texto.textContent = `${formatarDataCompleta(new Date(item.data))} — ${item.valor}/${item.diastolica} mmHg`;
-        const botao = document.createElement('button');
-        botao.type = 'button';
-        botao.className = 'btn-excluir';
-        botao.dataset.id = item.id;
-        botao.textContent = 'Excluir';
-        li.append(texto, botao);
-        ul.appendChild(li);
-    });
-}
-
-async function carregarHistoricoVisitas() {
-    const ul = document.getElementById('listaVisitas');
-    if (!ul) return;
-    let lista = [];
-    try {
-        const resposta = await api.visitas();
-        lista = Array.isArray(resposta) ? resposta : [];
-    } catch (e) {
-        ul.innerHTML = '';
-        const erro = document.createElement('li');
-        erro.className = 'mensagem-vazio';
-        erro.textContent = e.message;
-        ul.appendChild(erro);
-        return;
-    }
-    ul.innerHTML = '';
-    if (!lista.length) {
-        ul.innerHTML = '<li class="mensagem-vazio">Você ainda não tem visitas.</li>';
-        return;
-    }
-    lista.sort((a, b) => new Date(dataDaApi(b.dataHora)) - new Date(dataDaApi(a.dataHora))).forEach(v => {
-        const li = document.createElement('li');
-        const texto = document.createElement('span');
-        texto.textContent = formatarDataCompleta(new Date(dataDaApi(v.dataHora))) + (v.observacao ? ' — ' + v.observacao : '');
-        const chip = document.createElement('em');
-        chip.className = 'status-visita status-' + v.status;
-        chip.textContent = STATUS_VISITA[v.status] || 'Agendada';
-        li.append(texto, chip);
-        ul.appendChild(li);
-    });
-}
-
-function iniciarExclusoes() {
-    document.getElementById('listaPressao').addEventListener('click', async (evento) => {
-        const botao = evento.target.closest('.btn-excluir');
-        if (!botao || !confirm('Excluir esta medida de pressão?')) return;
-        botao.disabled = true;
-        try {
-            await api.excluirPressao(Number(botao.dataset.id));
-            await carregarPressao();
-            mostrarStatus('mensagemPressao', 'Medida excluída.', 'sucesso');
-        } catch (e) {
-            botao.disabled = false;
-            mostrarStatus('mensagemPressao', e.message, 'erro');
-        }
-    });
-
-    document.getElementById('humorTimeline').addEventListener('click', async (evento) => {
-        const botao = evento.target.closest('.btn-excluir-humor');
-        if (!botao || !confirm('Excluir este registro de humor?')) return;
-        try {
-            await api.excluirHumor(Number(botao.dataset.id));
-            await carregarHumor();
-            mostrarStatus('mensagemHumor', 'Registro excluído.', 'sucesso');
-        } catch (e) {
-            mostrarStatus('mensagemHumor', e.message, 'erro');
-        }
-    });
-}
-
-
 /*  INICIALIZAÇÃO DO LOGADO */
 document.addEventListener('DOMContentLoaded', async () => {
     if (!document.getElementById('saudacaoNome')) return;
@@ -1524,7 +1431,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     iniciarFormPressao();
     iniciarBotoesHumor();
     iniciarVisitas();
-    iniciarExclusoes();
 
     await Promise.all([carregarPressao(), carregarHumor(), carregarVisita()]);
 });
@@ -1590,7 +1496,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const overlayEsqueci = document.querySelector('#overlay-esqueci');
     const btnCancelar = document.querySelector('.btn-cancelar');
     const formEsqueci = document.querySelector('.form-esqueci');
-    const campoCpfEmail = document.querySelector('#cpf-email');
+    const campoEmailEsqueci = document.querySelector('#esqueci-email');
     const erroEsqueci = document.querySelector('#erro-esqueci');
 
     const linkCadastro = document.querySelector('.cadastro strong');
@@ -1655,20 +1561,55 @@ document.addEventListener('DOMContentLoaded', async () => {
             mostrarMensagem(erroLogin, 'Login realizado com sucesso! Bem-vindo(a), ' + primeiroNome + '. Redirecionando...', 'sucesso');
 
             setTimeout(function () {
-                const destino = sessionStorage.getItem('medicaMaisRedirecionar');
-                sessionStorage.removeItem('medicaMaisRedirecionar');
-                window.location.href = destino || 'logado.html';
+                window.location.href = 'logado.html';
             }, 1200);
         } catch (erro) {
-            mostrarMensagem(erroLogin, erro.message + ' Se você acabou de se cadastrar, confirme seu email antes de entrar.', 'erro');
+            mostrarMensagem(erroLogin, erro.message + ' Se você acabou de se cadastrar e não confirmou o email, use "Esqueceu sua senha?" para receber um código que também confirma o email.', 'erro');
             if (botao) botao.disabled = false;
         }
     });
 
     /*  ESQUECI A SENHA */
+    const overlayRedefinir = document.querySelector('#overlay-redefinir');
+    const formRedefinir = document.querySelector('.form-redefinir');
+    const textoRedefinir = document.querySelector('#texto-redefinir');
+    const erroRedefinir = document.querySelector('#erro-redefinir');
+    const campoNovaSenha = document.querySelector('#nova-senha');
+    const campoConfirmaNovaSenha = document.querySelector('#confirma-nova-senha');
+    const digitosRedefinir = Array.from(document.querySelectorAll('#overlay-redefinir .codigo-digito'));
+    let emailRedefinicao = '';
+
+    function limparRedefinicao() {
+        digitosRedefinir.forEach(function (d) {
+            d.value = '';
+            d.classList.remove('preenchido');
+        });
+        campoNovaSenha.value = '';
+        campoConfirmaNovaSenha.value = '';
+        esconderMensagem(erroRedefinir);
+    }
+
+    function abrirRedefinicao(email) {
+        emailRedefinicao = email;
+        limparRedefinicao();
+        textoRedefinir.innerHTML = 'Se <strong></strong> tiver cadastro, enviamos um código de 6 números. Digite o código e escolha a nova senha.';
+        textoRedefinir.querySelector('strong').textContent = email;
+        overlayRedefinir.classList.add('ativo');
+        setTimeout(function () { digitosRedefinir[0].focus(); }, 50);
+    }
+
+    function fecharRedefinicao() {
+        overlayRedefinir.classList.remove('ativo');
+        limparRedefinicao();
+    }
+
     linkEsqueceu.addEventListener('click', function (evento) {
         evento.preventDefault();
+        if (ehEmailValido(campoEmail.value.trim())) {
+            campoEmailEsqueci.value = campoEmail.value.trim();
+        }
         overlayEsqueci.classList.add('ativo');
+        setTimeout(function () { campoEmailEsqueci.focus(); }, 50);
     });
 
     btnCancelar.addEventListener('click', function () {
@@ -1676,33 +1617,113 @@ document.addEventListener('DOMContentLoaded', async () => {
         esconderMensagem(erroEsqueci);
     });
 
-    formEsqueci.addEventListener('submit', function (evento) {
+    formEsqueci.addEventListener('submit', async function (evento) {
         evento.preventDefault();
         esconderMensagem(erroEsqueci);
 
-        const valor = campoCpfEmail.value.trim();
-        const pareceEmail = valor.includes('@');
-        const semFormatacao = valor.replace(/[.\-\s]/g, '');
-        const ehCpfValido = /^\d{11}$/.test(semFormatacao);
+        const email = campoEmailEsqueci.value.trim().toLowerCase();
 
-        if (valor === '') {
-            mostrarMensagem(erroEsqueci, 'Digite seu CPF ou email para continuar.', 'erro');
+        if (email === '') {
+            mostrarMensagem(erroEsqueci, 'Digite o email cadastrado na sua conta.', 'erro');
             return;
         }
 
-        if (!pareceEmail && !ehCpfValido) {
-            mostrarMensagem(erroEsqueci, 'Digite um CPF com 11 números ou um email válido.', 'erro');
+        if (!ehEmailValido(email)) {
+            mostrarMensagem(erroEsqueci, 'Digite um email válido, como exemplo@gmail.com.', 'erro');
             return;
         }
 
-        mostrarMensagem(erroEsqueci, 'Pronto! Enviamos um link de recuperação. Verifique seu email (e a caixa de spam).', 'sucesso');
+        const botao = formEsqueci.querySelector('button[type="submit"]');
+        if (botao) botao.disabled = true;
 
-        setTimeout(function () {
+        try {
+            await api.esqueciSenha(email);
             overlayEsqueci.classList.remove('ativo');
-            esconderMensagem(erroEsqueci);
-            formEsqueci.reset();
-        }, 2500);
+            abrirRedefinicao(email);
+        } catch (erro) {
+            mostrarMensagem(erroEsqueci, erro.message, 'erro');
+        } finally {
+            if (botao) botao.disabled = false;
+        }
     });
+
+    digitosRedefinir.forEach(function (campo, i) {
+        campo.addEventListener('input', function () {
+            campo.value = campo.value.replace(/\D/g, '').slice(-1);
+            campo.classList.toggle('preenchido', campo.value !== '');
+            if (campo.value && i < digitosRedefinir.length - 1) digitosRedefinir[i + 1].focus();
+        });
+
+        campo.addEventListener('keydown', function (evento) {
+            if (evento.key === 'Backspace' && !campo.value && i > 0) {
+                digitosRedefinir[i - 1].focus();
+            }
+        });
+
+        campo.addEventListener('paste', function (evento) {
+            evento.preventDefault();
+            const colado = (evento.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, digitosRedefinir.length);
+            colado.split('').forEach(function (numero, k) {
+                digitosRedefinir[k].value = numero;
+                digitosRedefinir[k].classList.add('preenchido');
+            });
+            if (colado.length) digitosRedefinir[Math.min(colado.length, digitosRedefinir.length - 1)].focus();
+        });
+    });
+
+    formRedefinir.addEventListener('submit', async function (evento) {
+        evento.preventDefault();
+        esconderMensagem(erroRedefinir);
+
+        const codigo = digitosRedefinir.map(function (d) { return d.value; }).join('');
+        const novaSenha = campoNovaSenha.value;
+
+        if (codigo.length !== digitosRedefinir.length) {
+            mostrarMensagem(erroRedefinir, 'Digite os 6 números do código.', 'erro');
+            return;
+        }
+
+        if (novaSenha.length < 6) {
+            mostrarMensagem(erroRedefinir, 'A nova senha deve ter no mínimo 6 caracteres.', 'erro');
+            return;
+        }
+
+        if (novaSenha !== campoConfirmaNovaSenha.value) {
+            mostrarMensagem(erroRedefinir, 'As senhas não coincidem. Digite a mesma senha nos dois campos.', 'erro');
+            return;
+        }
+
+        const botao = formRedefinir.querySelector('button[type="submit"]');
+        if (botao) botao.disabled = true;
+
+        try {
+            const r = await api.redefinirSenha(emailRedefinicao, codigo, novaSenha);
+            mostrarMensagem(erroRedefinir, (r && r.mensagem) || 'Senha redefinida com sucesso.', 'sucesso');
+            campoEmail.value = emailRedefinicao;
+
+            setTimeout(function () {
+                fecharRedefinicao();
+                campoSenha.value = '';
+                campoSenha.focus();
+            }, 1800);
+        } catch (erro) {
+            mostrarMensagem(erroRedefinir, erro.message, 'erro');
+        } finally {
+            if (botao) botao.disabled = false;
+        }
+    });
+
+    document.querySelector('#reenviar-redefinir').addEventListener('click', async function () {
+        esconderMensagem(erroRedefinir);
+        try {
+            await api.esqueciSenha(emailRedefinicao);
+            mostrarMensagem(erroRedefinir, 'Se o email estiver cadastrado, enviamos um novo código.', 'sucesso');
+        } catch (erro) {
+            mostrarMensagem(erroRedefinir, erro.message, 'erro');
+        }
+    });
+
+    document.querySelector('#cancelar-redefinir').addEventListener('click', fecharRedefinicao);
 
     /*  CADASTRO */
     linkCadastro.addEventListener('click', function () {
@@ -1791,8 +1812,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     /*  CONFIRMACAO DE EMAIL */
-    document.querySelector('.cadastro').insertAdjacentHTML('afterend',
-        '<p class="cadastro"><strong id="link-confirmar">Confirmar meu email</strong></p>');
 
     const overlayConfirmar = document.querySelector('#overlay-confirmar');
     const formConfirmar = document.querySelector('.form-confirmar');
@@ -1800,7 +1819,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const linhaEmailConfirma = document.querySelector('#linha-email-confirma');
     const textoConfirmar = document.querySelector('#texto-confirmar');
     const erroConfirmar = document.querySelector('#erro-confirmar');
-    const digitos = Array.from(document.querySelectorAll('.codigo-digito'));
+    const digitos = Array.from(document.querySelectorAll('#overlay-confirmar .codigo-digito'));
 
     function codigoDigitado() {
         return digitos.map(function (d) { return d.value; }).join('');
@@ -1860,10 +1879,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             if (colado.length) digitos[Math.min(colado.length, digitos.length - 1)].focus();
         });
-    });
-
-    document.querySelector('#link-confirmar').addEventListener('click', function () {
-        abrirConfirmacao(ehEmailValido(campoEmail.value.trim()) ? campoEmail.value.trim() : '');
     });
 
     document.querySelector('#cancelar-confirmar').addEventListener('click', fecharConfirmacao);
