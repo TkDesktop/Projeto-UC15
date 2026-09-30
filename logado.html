@@ -27,6 +27,7 @@
                 <li><a href="#monitoramento">Monitoramento</a></li>
                 <li><a href="#contatos">Contatos</a></li>
                 <li><a href="#suporte">Suporte Prioritário</a></li>
+                <li><a href="#plano">Meu Plano</a></li>
                 <li><a href="#" id="linkPerfilNav">Perfil</a></li>
             </ul>
         </div>
@@ -179,9 +180,14 @@
 
             <p id="statusFiltro" role="status"></p>
 
-            <details class="registros-detalhe">
-                <summary>Ver e excluir registros do período</summary>
-                <ul class="registros-lista" id="listaPressao"></ul>
+            <details class="registros-detalhe" open>
+                <summary>Histórico de medidas <span class="contador" id="contadorPressao">0</span></summary>
+                <p class="registros-legenda">
+                    <span class="reg-tag reg-tag-normal">Normal</span>
+                    <span class="reg-tag reg-tag-alta">Alta: acima de 140/90</span>
+                    <span class="reg-tag reg-tag-baixa">Baixa: abaixo de 90/60</span>
+                </p>
+                <ul class="registros-lista rolavel" id="listaPressao"></ul>
             </details>
 
         </section>
@@ -323,9 +329,18 @@
             <p class="suporte-aviso">
                 Não poderá receber a visita? Toque em
                 <button type="button" id="btnReagendar" class="btn-reagendar">Reagendar</button>
-                (usa a data escolhida abaixo ou adia 14 dias) ou
+                (você escolhe a nova data) ou
                 <button type="button" id="btnCancelarVisita" class="btn-reagendar">Cancelar visita</button>.
             </p>
+
+            <form class="registro-form" id="formReagendar" hidden novalidate>
+                <h3>Reagendar visita</h3>
+                <div class="registro-campos">
+                    <label>Nova data e hora<input type="datetime-local" id="reagendarDataHora"></label>
+                    <button type="submit" class="btn-registrar">Confirmar nova data</button>
+                    <button type="button" class="btn-secundario" id="btnCancelarReagendar">Voltar</button>
+                </div>
+            </form>
 
             <form class="registro-form" id="formVisita" novalidate>
                 <h3>Agendar ou reagendar visita</h3>
@@ -339,8 +354,22 @@
             <p class="mensagem-status" id="mensagemStatusVisita" role="status" aria-live="polite"></p>
 
             <h3 class="historico-titulo">Histórico de visitas</h3>
-            <ul class="registros-lista" id="listaVisitas"></ul>
+            <h4 class="grupo-titulo">Próximas</h4>
+            <ul class="registros-lista" id="listaVisitasProximas"></ul>
+            <h4 class="grupo-titulo">Passadas</h4>
+            <ul class="registros-lista" id="listaVisitasPassadas"></ul>
 
+        </section>
+
+        <!-- ==========================================================
+                              MEU PLANO
+             ========================================================== -->
+        <section class="secao-suporte secao-plano" id="plano">
+            <header>
+                <h2>Meu plano</h2>
+                <p>Plano atual: <strong id="planoAtualNome">carregando...</strong></p>
+            </header>
+            <div class="planos-grade" id="planosOpcoes"></div>
         </section>
 
     </main>
@@ -403,7 +432,7 @@
                 <div class="campo campo-plano">
                     <label>Plano atual</label>
                     <p id="campoPlano">Basic +</p>
-                    <small>Para trocar de plano, acesse a seção "Planos" no site.</small>
+                    <a href="#plano" id="linkTrocarPlano" class="link-trocar-plano">Trocar de plano</a>
                 </div>
 
                 <p class="mensagem-status" id="mensagemStatus" role="status" aria-live="polite"></p>

@@ -140,6 +140,24 @@
     var nomePlano = params.get('plano') || 'Basic';
     var precoStr = params.get('preco') || '0,00';
 
+    if (!obterToken()) {
+        sessionStorage.setItem('medicaMaisRedirecionar', window.location.href);
+        window.location.href = 'login.html';
+        return;
+    }
+
+    var planoEnum = { 'essencial': 0, 'cuidado+': 1, 'cuidado total': 2 }[nomePlano.toLowerCase()];
+    if (planoEnum === undefined) planoEnum = 0;
+
+    // Contrata (1a vez) ou troca de plano. metodo: 0 = Cartao, 1 = Pix
+    async function assinar(metodo) {
+        var perfil = await api.perfil();
+        var dto = { plano: planoEnum, metodoPagamento: metodo };
+        if (perfil.plano === null || perfil.plano === undefined) return api.checkout(dto);
+        if (perfil.plano === planoEnum) throw new Error('Você já possui este plano.');
+        return api.trocarPlano(dto);
+    }
+
     document.getElementById('resumo-plano').textContent = nomePlano;
     document.getElementById('resumo-preco').textContent = 'R$ ' + precoStr;
 
@@ -160,7 +178,13 @@
         gratisBotao.textContent = 'Ativar plano grátis';
         document.querySelector('.checkout').appendChild(gratisBotao);
         gratisBotao.addEventListener('click', function () {
-            mostrarSucesso('Plano Basic grátis ativado!');
+            gratisBotao.disabled = true;
+            assinar(0).then(function () {
+                mostrarSucesso('Plano ' + nomePlano + ' grátis ativado!');
+            }).catch(function (erro) {
+                gratisBotao.disabled = false;
+                alert(erro.message);
+            });
         });
     }
 
@@ -261,11 +285,14 @@
         btnPagar.textContent = 'Processando...';
         mostrarMsg(msgCartao, 'Processando pagamento, aguarde...', 'sucesso');
 
-        setTimeout(function () {
+        assinar(0).then(function () {
+            mostrarSucesso('Pagamento de R$ ' + precoStr + ' aprovado! Seu plano ' + nomePlano + ' já está ativo.');
+        }).catch(function (erro) {
+            mostrarMsg(msgCartao, erro.message, 'erro');
+        }).then(function () {
             btnPagar.disabled = false;
             btnPagar.textContent = 'Pagar R$ ' + precoStr;
-            mostrarSucesso('Pagamento de R$ ' + precoStr + ' aprovado! Seu plano ' + nomePlano + ' já está ativo.');
-        }, 2000);
+        });
     });
 
     /*  PIX */
@@ -295,11 +322,14 @@
         btnConfirmar.textContent = 'Verificando pagamento...';
         mostrarMsg(msgPix, 'Confirmando com o banco, aguarde...', 'sucesso');
 
-        setTimeout(function () {
+        assinar(1).then(function () {
+            mostrarSucesso('Pix de R$ ' + precoStr + ' confirmado! Seu plano ' + nomePlano + ' já está ativo.');
+        }).catch(function (erro) {
+            mostrarMsg(msgPix, erro.message, 'erro');
+        }).then(function () {
             btnConfirmar.disabled = false;
             btnConfirmar.textContent = 'Já paguei';
-            mostrarSucesso('Pix de R$ ' + precoStr + ' confirmado! Seu plano ' + nomePlano + ' já está ativo.');
-        }, 2500);
+        });
     });
 
     /*  OVERLAY DE SUCESSO */
@@ -566,6 +596,7 @@ function aplicarFiltro() {
     const dadosFiltrados = filtrarPorPeriodo(dataInicio, dataFim);
 
     renderizarGrafico(dadosFiltrados);
+    renderizarListaPressao(dadosFiltrados);
     atualizarBadges(dadosFiltrados);
     atualizarUltimaAtualizacao(dadosFiltrados);
     atualizarEstatisticas(dadosFiltrados);
@@ -615,6 +646,8 @@ function tipoUsuarioDaApi(t) {
     return TIPOS_USUARIO[t] || 'paciente';
 }
 
+const PLANOS_NOME = ['Essencial (grátis)', 'Cuidado+', 'Cuidado Total'];
+
 // Converte o JSON da API (UsuarioRespostaDto) para o formato usado nos campos da tela
 function usuarioDaApi(u) {
     u = u || {};
@@ -624,7 +657,7 @@ function usuarioDaApi(u) {
         cpf: formatarCpf(u.cpf),
         telefone: formatarTelefone(u.telefone),
         tipo: tipoUsuarioDaApi(u.tipoUsuario),
-        plano: (u.plano !== null && u.plano !== undefined) ? 'Plano ativo' : 'Nenhum plano contratado',
+        plano: (u.plano !== null && u.plano !== undefined) ? (PLANOS_NOME[u.plano] || 'Plano ativo') : 'Nenhum plano contratado',
         foto: u.fotoUrl || null
     };
 }
@@ -831,11 +864,15 @@ async function aoEnviarFormulario(evento) {
     mostrarMensagemPerfil('');
 
     try {
+        const emailAntes = dadosUsuario.email;
         await salvarPerfilNoServidor(dadosNovos);
+        const emailMudou = dadosUsuario.email !== emailAntes;
         fotoPendente = undefined;
         atualizarSaudacao();
-        mostrarMensagemPerfil('Perfil atualizado com sucesso!', 'sucesso');
-        setTimeout(fecharPerfil, 1200);
+        mostrarMensagemPerfil(emailMudou
+            ? 'Perfil atualizado! Enviamos um código para o novo e-mail: confirme-o na tela de login antes do próximo acesso.'
+            : 'Perfil atualizado com sucesso!', 'sucesso');
+        setTimeout(fecharPerfil, emailMudou ? 4500 : 1200);
     } catch (erro) {
         mostrarMensagemPerfil(erro.message, 'erro-geral');
     } finally {
@@ -1148,6 +1185,7 @@ function iniciarFormularioContato() {
 let visitaAtual = null; // { id, data: Date }
 
 function atualizarVisualVisita() {
+    atualizarBotoesVisita();
     const datas = document.querySelectorAll('.js-visita-data');
     const horas = document.querySelectorAll('.js-visita-hora');
 
@@ -1174,12 +1212,14 @@ async function carregarVisita() {
         visitaAtual = null; // sem visita futura
     }
     atualizarVisualVisita();
+    await carregarHistoricoVisitas();
 }
 
 function iniciarVisitas() {
     const form = document.getElementById('formVisita');
     const inputData = document.getElementById('visitaDataHora');
     const status = 'mensagemStatusVisita';
+    inputData.addEventListener('focus', () => { inputData.min = paraInputDataHora(new Date()); });
 
     form.addEventListener('submit', async (evento) => {
         evento.preventDefault();
@@ -1197,23 +1237,44 @@ function iniciarVisitas() {
         }
     });
 
-    document.getElementById('btnReagendar').addEventListener('click', async () => {
+    const formReagendar = document.getElementById('formReagendar');
+    const inputReagendar = document.getElementById('reagendarDataHora');
+
+    document.getElementById('btnReagendar').addEventListener('click', () => {
         if (!visitaAtual) {
-            mostrarStatus(status, 'Não há visita agendada para reagendar.', 'erro');
+            mostrarStatus(status, 'Você não tem visita agendada para reagendar.', 'erro');
             return;
         }
-        let nova = new Date(visitaAtual.data);
-        if (inputData.value) nova = new Date(inputData.value);
-        else nova.setDate(nova.getDate() + 14);
+        inputReagendar.min = paraInputDataHora(new Date());
+        inputReagendar.value = '';
+        formReagendar.hidden = false;
+        inputReagendar.focus();
+    });
 
+    document.getElementById('btnCancelarReagendar').addEventListener('click', () => {
+        formReagendar.hidden = true;
+    });
+
+    formReagendar.addEventListener('submit', async (evento) => {
+        evento.preventDefault();
+        if (!visitaAtual) {
+            formReagendar.hidden = true;
+            mostrarStatus(status, 'Você não tem visita agendada para reagendar.', 'erro');
+            return;
+        }
+        if (!inputReagendar.value) {
+            mostrarStatus(status, 'Escolha a nova data e hora da visita.', 'erro');
+            return;
+        }
+        const nova = new Date(inputReagendar.value);
         if (nova <= new Date()) {
             mostrarStatus(status, 'A nova data precisa estar no futuro.', 'erro');
             return;
         }
         try {
             await api.reagendarVisita(visitaAtual.id, nova);
+            formReagendar.hidden = true;
             await carregarVisita();
-            form.reset();
             mostrarStatus(status, 'Visita reagendada! Confira a nova data acima.', 'sucesso');
         } catch (e) {
             mostrarStatus(status, e.message, 'erro');
@@ -1276,6 +1337,13 @@ function renderizarTimelineHumor(dados) {
             <span class="data">${dia}/${mes}<br>${hora}:${String(data.getMinutes()).padStart(2, '0')}</span>
         `;
 
+        const excluir = document.createElement('button');
+        excluir.type = 'button';
+        excluir.className = 'btn-excluir-humor';
+        excluir.dataset.id = item.id;
+        excluir.setAttribute('aria-label', 'Excluir este registro de humor');
+        excluir.textContent = '×';
+        div.appendChild(excluir);
         container.appendChild(div);
     });
 }
@@ -1362,6 +1430,16 @@ async function carregarHumor() {
 
 function iniciarFormPressao() {
     const form = document.getElementById('formPressao');
+    const inputQuando = document.getElementById('pressaoDataHora');
+    const definirLimites = () => {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        inputQuando.min = paraInputDataHora(hoje);
+        inputQuando.max = paraInputDataHora(new Date());
+    };
+    definirLimites();
+    inputQuando.addEventListener('focus', definirLimites);
+
     form.addEventListener('submit', async (evento) => {
         evento.preventDefault();
         const sis = parseInt(document.getElementById('pressaoSistolica').value, 10);
@@ -1371,6 +1449,13 @@ function iniciarFormPressao() {
         if (!sis || !dia) return mostrarStatus('mensagemPressao', 'Informe a sistólica e a diastólica.', 'erro');
         if (sis < 40 || sis > 300 || dia < 20 || dia > 200) return mostrarStatus('mensagemPressao', 'Valores fora do intervalo aceito.', 'erro');
         if (sis <= dia) return mostrarStatus('mensagemPressao', 'A sistólica deve ser maior que a diastólica.', 'erro');
+        if (quando) {
+            const escolhida = new Date(quando);
+            const inicioHoje = new Date();
+            inicioHoje.setHours(0, 0, 0, 0);
+            if (escolhida < inicioHoje) return mostrarStatus('mensagemPressao', 'Não é possível registrar medidas em datas anteriores a hoje.', 'erro');
+            if (escolhida > new Date(Date.now() + 60000)) return mostrarStatus('mensagemPressao', 'A data da medida não pode estar no futuro.', 'erro');
+        }
 
         const botao = form.querySelector('button[type="submit"]');
         botao.disabled = true;
@@ -1405,6 +1490,184 @@ function iniciarBotoesHumor() {
 }
 
 
+/*  REGISTROS: LISTA, EXCLUSÃO E HISTÓRICO */
+const STATUS_VISITA = ['Agendada', 'Reagendada', 'Concluída', 'Cancelada'];
+
+function renderizarListaPressao(dados) {
+    const ul = document.getElementById('listaPressao');
+    if (!ul) return;
+    const contador = document.getElementById('contadorPressao');
+    if (contador) contador.textContent = dados.length;
+    ul.innerHTML = '';
+    if (!dados.length) {
+        ul.appendChild(criarItem('li', 'reg-vazio', 'Nenhuma medida registrada nesse período.'));
+        return;
+    }
+    const rotulos = { alta: 'Alta', baixa: 'Baixa', normal: 'Normal' };
+    [...dados].sort((a, b) => new Date(b.data) - new Date(a.data)).forEach(item => {
+        const d = new Date(item.data);
+        const dia = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        const hora = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        const tipo = classificarMedida(item);
+
+        const li = criarItem('li', 'reg-item reg-' + tipo);
+        const quando = criarItem('div', 'reg-quando');
+        quando.append(criarItem('strong', '', dia), criarItem('span', '', hora));
+        const valor = criarItem('div', 'reg-valor');
+        valor.append(criarItem('strong', '', String(item.valor)), criarItem('span', 'reg-barra', '/'),
+            criarItem('strong', '', String(item.diastolica)), criarItem('small', '', 'mmHg'));
+        const tag = criarItem('span', 'reg-tag reg-tag-' + tipo, rotulos[tipo]);
+        const botao = criarItem('button', 'btn-excluir', 'Excluir');
+        botao.type = 'button';
+        botao.dataset.id = item.id;
+        botao.setAttribute('aria-label', `Excluir a medida de ${dia} às ${hora}`);
+        li.append(quando, valor, tag, botao);
+        ul.appendChild(li);
+    });
+}
+
+function linhaVisita(v) {
+    const d = new Date(dataDaApi(v.dataHora));
+    const passou = d < new Date();
+    let rotulo = 'Agendada', classe = 'agendada';
+    if (v.status === 3) { rotulo = 'Cancelada'; classe = 'cancelada'; }
+    else if (passou) { rotulo = 'Concluída'; classe = 'concluida'; } // o back não marca "concluída": derivamos pela data
+    else if (v.status === 1) { rotulo = 'Reagendada'; classe = 'reagendada'; }
+
+    const dia = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    const hora = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const li = criarItem('li', 'reg-item reg-visita reg-visita-' + classe);
+    const quando = criarItem('div', 'reg-quando');
+    quando.append(criarItem('strong', '', dia), criarItem('span', '', hora));
+    li.append(quando,
+        criarItem('div', 'reg-info', v.observacao ? v.observacao : 'Visita de suporte'),
+        criarItem('span', 'reg-tag reg-tag-' + classe, rotulo));
+    return { li, futura: !passou && v.status !== 3 };
+}
+
+async function carregarHistoricoVisitas() {
+    const ulProximas = document.getElementById('listaVisitasProximas');
+    const ulPassadas = document.getElementById('listaVisitasPassadas');
+    if (!ulProximas || !ulPassadas) return;
+    let lista = [];
+    try {
+        const resposta = await api.visitas();
+        lista = Array.isArray(resposta) ? resposta : [];
+    } catch (e) {
+        ulProximas.innerHTML = '';
+        ulPassadas.innerHTML = '';
+        ulProximas.appendChild(criarItem('li', 'reg-vazio', e.message));
+        return;
+    }
+    const quando = v => new Date(dataDaApi(v.dataHora));
+    const itens = lista.map(v => ({ v, ...linhaVisita(v) }));
+    const proximas = itens.filter(i => i.futura).sort((a, b) => quando(a.v) - quando(b.v));
+    const passadas = itens.filter(i => !i.futura).sort((a, b) => quando(b.v) - quando(a.v));
+
+    ulProximas.innerHTML = '';
+    ulPassadas.innerHTML = '';
+    if (!proximas.length) ulProximas.appendChild(criarItem('li', 'reg-vazio', 'Nenhuma visita agendada.'));
+    if (!passadas.length) ulPassadas.appendChild(criarItem('li', 'reg-vazio', 'Nenhuma visita passada ainda.'));
+    proximas.forEach(i => ulProximas.appendChild(i.li));
+    passadas.forEach(i => ulPassadas.appendChild(i.li));
+}
+
+function iniciarExclusoes() {
+    document.getElementById('listaPressao').addEventListener('click', async (evento) => {
+        const botao = evento.target.closest('.btn-excluir');
+        if (!botao || !confirm('Excluir esta medida de pressão?')) return;
+        botao.disabled = true;
+        try {
+            await api.excluirPressao(Number(botao.dataset.id));
+            await carregarPressao();
+            mostrarStatus('mensagemPressao', 'Medida excluída.', 'sucesso');
+        } catch (e) {
+            botao.disabled = false;
+            mostrarStatus('mensagemPressao', e.message, 'erro');
+        }
+    });
+
+    document.getElementById('humorTimeline').addEventListener('click', async (evento) => {
+        const botao = evento.target.closest('.btn-excluir-humor');
+        if (!botao || !confirm('Excluir este registro de humor?')) return;
+        try {
+            await api.excluirHumor(Number(botao.dataset.id));
+            await carregarHumor();
+            mostrarStatus('mensagemHumor', 'Registro excluído.', 'sucesso');
+        } catch (e) {
+            mostrarStatus('mensagemHumor', e.message, 'erro');
+        }
+    });
+}
+
+
+/*  MEU PLANO E UTILITÁRIOS */
+function paraInputDataHora(d) {
+    return paraInputData(d) + 'T' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+function atualizarBotoesVisita() {
+    const tem = !!visitaAtual;
+    ['btnReagendar', 'btnCancelarVisita'].forEach(id => {
+        const botao = document.getElementById(id);
+        if (!botao) return;
+        botao.disabled = !tem;
+        botao.title = tem ? '' : 'Você não tem visita agendada.';
+    });
+    if (!tem) {
+        const formReagendar = document.getElementById('formReagendar');
+        if (formReagendar) formReagendar.hidden = true;
+    }
+}
+
+const PLANOS_INFO = [
+    { nome: 'Essencial', preco: '0,00', periodo: '/mês' },
+    { nome: 'Cuidado+', preco: '59,90', periodo: '/mês' },
+    { nome: 'Cuidado Total', preco: '699,99', periodo: '/ano' }
+];
+
+function renderizarPlanos(planoAtual) {
+    const grade = document.getElementById('planosOpcoes');
+    if (!grade) return;
+    const temPlano = planoAtual !== null && planoAtual !== undefined;
+    document.getElementById('planoAtualNome').textContent = temPlano ? (PLANOS_NOME[planoAtual] || 'Plano ativo') : 'Nenhum plano contratado';
+    grade.innerHTML = '';
+    PLANOS_INFO.forEach((p, i) => {
+        const eAtual = temPlano && planoAtual === i;
+        const card = criarItem('article', 'plano-card' + (eAtual ? ' atual' : ''));
+        card.appendChild(criarItem('h3', '', p.nome));
+        const preco = criarItem('p', 'plano-preco', 'R$ ' + p.preco);
+        preco.appendChild(criarItem('small', '', ' ' + p.periodo));
+        card.appendChild(preco);
+        if (eAtual) {
+            card.appendChild(criarItem('span', 'plano-selo', 'Seu plano atual'));
+            const botao = criarItem('button', 'btn-registrar', 'Plano atual');
+            botao.type = 'button';
+            botao.disabled = true;
+            card.appendChild(botao);
+        } else {
+            const link = criarItem('a', 'btn-registrar btn-link', temPlano ? 'Trocar para este plano' : 'Assinar este plano');
+            link.href = 'checkout.html?plano=' + encodeURIComponent(p.nome) + '&preco=' + encodeURIComponent(p.preco);
+            card.appendChild(link);
+        }
+        grade.appendChild(card);
+    });
+}
+
+async function carregarPlano() {
+    let plano = null;
+    try {
+        const u = await api.perfil();
+        localStorage.setItem(CHAVE_SESSAO_USUARIO, JSON.stringify(u));
+        dadosUsuario = usuarioDaApi(u);
+        plano = u.plano;
+    } catch (e) {
+        plano = lerSessaoUsuario().plano;
+    }
+    renderizarPlanos(plano);
+}
+
+
 /*  INICIALIZAÇÃO DO LOGADO */
 document.addEventListener('DOMContentLoaded', async () => {
     if (!document.getElementById('saudacaoNome')) return;
@@ -1422,6 +1685,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('humorFim').addEventListener('change', aplicarFiltroHumor);
 
     iniciarPerfil();
+    const linkPlano = document.getElementById('linkTrocarPlano');
+    if (linkPlano) linkPlano.addEventListener('click', fecharPerfil);
 
     iniciarAbasContatos();
     carregarContatos();
@@ -1431,8 +1696,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     iniciarFormPressao();
     iniciarBotoesHumor();
     iniciarVisitas();
+    iniciarExclusoes();
 
-    await Promise.all([carregarPressao(), carregarHumor(), carregarVisita()]);
+    await Promise.all([carregarPressao(), carregarHumor(), carregarVisita(), carregarPlano()]);
 });
 
 
@@ -1561,7 +1827,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             mostrarMensagem(erroLogin, 'Login realizado com sucesso! Bem-vindo(a), ' + primeiroNome + '. Redirecionando...', 'sucesso');
 
             setTimeout(function () {
-                window.location.href = 'logado.html';
+                const destino = sessionStorage.getItem('medicaMaisRedirecionar');
+                sessionStorage.removeItem('medicaMaisRedirecionar');
+                window.location.href = destino || 'logado.html';
             }, 1200);
         } catch (erro) {
             mostrarMensagem(erroLogin, erro.message + ' Se você acabou de se cadastrar e não confirmou o email, use "Esqueceu sua senha?" para receber um código que também confirma o email.', 'erro');
