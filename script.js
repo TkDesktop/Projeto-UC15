@@ -1,3 +1,25 @@
+/* ====== LINKS DO RODAPÉ: PDFs E CENTRAL DE AJUDA ====== */
+(function () {
+    var destinos = {
+        'termos de uso': 'docs/termos-de-uso.pdf',
+        'política de privacidade': 'docs/politica-de-privacidade.pdf',
+        'central de ajuda': 'index.html#contato'
+    };
+
+    document.querySelectorAll('footer a').forEach(function (link) {
+        var texto = link.textContent.replace(/\s+/g, ' ').trim().toLowerCase();
+        var destino = destinos[texto];
+        if (!destino) return;
+
+        link.setAttribute('href', destino);
+        if (destino.slice(-4) === '.pdf') {
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener');
+        }
+    });
+})();
+
+
 /* ====== HOME ====== */
 /*  MENU MOBILE */
 (function () {
