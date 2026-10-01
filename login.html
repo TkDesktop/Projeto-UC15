@@ -1,4 +1,28 @@
-<!DOCTYPE html>
+
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body {
+                  background-color: white; /* Ensure the iframe has a white background */
+                }
+
+                .logo-link {
+    text-decoration: none;
+    display: inline-block;
+    cursor: pointer;
+}
+.logo-link:hover {
+    opacity: 0.9;
+}
+
+
+              </style>
+                        </head>
+                        <body>
+                            <!DOCTYPE html>
 <html lang="pt-br">
 
 <head>
@@ -54,6 +78,16 @@
             border: 1px solid #d0d7e6; border-radius: 8px; font-size: 15px;
         }
         #overlay-redefinir .form-redefinir { margin-top: 8px; }
+
+        /* Logo clicável */
+        .logo-link {
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .logo-link:hover {
+            opacity: 0.9;
+        }
     </style>
 </head>
 
@@ -63,7 +97,9 @@
         <a class="X" href="index.html" aria-label="Voltar para a home">×</a>
 
         <section class="login-card">
-            <img src="img/img-login.png" alt="Logo Medica+">
+            <a href="index.html" class="logo-link" aria-label="Voltar para a página inicial">
+                <img src="img/img-login.png" alt="Logo Medica+">
+            </a>
 
             <h1>Bem-vindo(a) de volta</h1>
             <p class="login-subtitulo">Entre na sua conta para acompanhar sua saúde.</p>
@@ -240,3 +276,14 @@
 </body>
 
 </html>
+<a href="index.html" class="logo-link" aria-label="Voltar para a página inicial">
+    <img src="img/img-login.png" alt="Logo Medica+">
+</a>
+
+
+     <script src="api.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
+                    

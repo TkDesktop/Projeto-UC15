@@ -4,90 +4,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pagamento - Medica+</title>
+    <title>Medica+ - Checkout</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body class="pagina-checkout">
 
-    <main class="checkout">
+    <a href="#conteudo" class="skip-link">Pular para o conteúdo</a>
 
-        <a href="index.html" class="voltar">← Voltar</a>
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo-link" onclick="window.scrollTo({top: 0, behavior: 'smooth'});">
+                <img src="img/logo.png" alt="Logo Medica+">
+            </a>
+            <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="menuNav"
+                aria-label="Abrir menu de navegação">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
 
-        <h1>Finalizar assinatura</h1>
+            <ul id="menuNav">
+                <li><a href="index.html">Início</a></li>
+                <li><a href="index.html#funcionalidades">Funcionalidades</a></li>
+                <li><a href="index.html#sobre">Sobre</a></li>
+                <li><a href="index.html#planos">Planos</a></li>
+                <li><a href="index.html#contato">Contatos</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </div>
+    </nav>
 
-        <section class="resumo" aria-live="polite">
-            <div>
-                <p class="resumo-label">Plano selecionado</p>
-                <p class="resumo-plano" id="resumo-plano">—</p>
-            </div>
-            <p class="resumo-preco" id="resumo-preco">R$ 0,00</p>
-        </section>
-
-        <div class="metodos" role="tablist" aria-label="Forma de pagamento">
-            <button type="button" class="metodo ativo" id="btn-cartao" role="tab" aria-selected="true">💳 Cartão</button>
-            <button type="button" class="metodo" id="btn-pix" role="tab" aria-selected="false">⚡ Pix</button>
+    <main id="conteudo" class="checkout">
+        <h1>Finalizar Assinatura</h1>
+        
+        <div class="resumo">
+            <h2>Resumo do Plano</h2>
+            <p>Plano: <strong id="resumo-plano"></strong></p>
+            <p>Valor: <strong id="resumo-preco"></strong></p>
         </div>
 
-        <!-- ==================== CARTÃO ==================== -->
-        <form class="form-pagamento" id="form-cartao">
+        <div class="metodos">
+            <button type="button" id="btn-cartao" class="ativo" aria-selected="true">Cartão de Crédito</button>
+            <button type="button" id="btn-pix" aria-selected="false">Pix</button>
+        </div>
 
-            <label for="nome-cartao">Nome no cartão</label>
-            <input type="text" id="nome-cartao" placeholder="Como está impresso no cartão" autocomplete="cc-name">
-
-            <label for="numero-cartao">Número do cartão</label>
-            <input type="text" id="numero-cartao" placeholder="0000 0000 0000 0000" inputmode="numeric"
-                autocomplete="cc-number">
-
-            <div class="linha-dupla">
-                <div>
+        <form id="form-cartao">
+            <h3>Pagamento com Cartão</h3>
+            <div class="form-group">
+                <label for="nome-cartao">Nome no Cartão</label>
+                <input type="text" id="nome-cartao" required>
+            </div>
+            <div class="form-group">
+                <label for="numero-cartao">Número do Cartão</label>
+                <input type="text" id="numero-cartao" maxlength="19" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
                     <label for="validade">Validade</label>
-                    <input type="text" id="validade" placeholder="MM/AA" inputmode="numeric" autocomplete="cc-exp">
+                    <input type="text" id="validade" placeholder="MM/AA" maxlength="5" required>
                 </div>
-                <div>
+                <div class="form-group">
                     <label for="cvv">CVV</label>
-                    <input type="text" id="cvv" placeholder="123" inputmode="numeric" autocomplete="cc-csc">
+                    <input type="text" id="cvv" maxlength="4" required>
                 </div>
             </div>
-
-            <p class="mensagem" id="msg-cartao"></p>
-
-            <button type="submit" class="btn-pagar" id="btn-pagar-cartao">Pagar <span id="valor-botao"></span></button>
+            <button type="submit" id="btn-pagar-cartao" class="btn-pagar">Pagar <span id="valor-botao"></span></button>
+            <div id="msg-cartao" class="mensagem"></div>
         </form>
 
-        <!-- ==================== PIX ==================== -->
-        <div class="form-pagamento escondido" id="form-pix">
-
-            <div class="pix-qr" aria-hidden="true">▦</div>
-
-            <p class="pix-texto">Escaneie o QR Code no app do seu banco ou copie o código Pix:</p>
-
-            <div class="pix-codigo">
-                <input type="text" id="codigo-pix" readonly
-                    value="URUBUDOPIXPAGUEAGORA!">
+        <div id="form-pix" class="escondido">
+            <h3>Pagamento com Pix</h3>
+            <p>Escaneie o QR Code ou copie o código abaixo:</p>
+            <div class="pix-container">
+                <input type="text" id="codigo-pix" readonly value="00020126580014br.gov.bcb.pix0136medicamais-pix@example.com520400005303986540510.005802BR5913MEDICA MAIS LTDA6009SAO PAULO62070503***6304ABCD">
                 <button type="button" id="btn-copiar-pix">Copiar</button>
             </div>
-
-            <p class="mensagem" id="msg-pix"></p>
-
-            <button type="button" class="btn-pagar" id="btn-confirmar-pix">Já paguei</button>
+            <button type="button" id="btn-confirmar-pix" class="btn-pagar">Já paguei</button>
+            <div id="msg-pix" class="mensagem"></div>
         </div>
 
+        <div id="overlay-sucesso" class="overlay">
+            <div class="overlay-content">
+                <h2>✅ Pagamento Aprovado!</h2>
+                <p id="sucesso-texto"></p>
+                <p>Redirecionando para seu painel...</p>
+            </div>
+        </div>
     </main>
 
+    <footer id="contato">
+        <div class="footer-container">
 
-    <div class="overlay-sucesso" id="overlay-sucesso">
-        <div class="caixa-sucesso">
-            <div class="check">✓</div>
-            <h2>Pagamento aprovado!</h2>
-            <p id="sucesso-texto">Sua assinatura foi ativada com sucesso.</p>
-            <a href="index.html" class="btn-pagar">Voltar para o início</a>
+            <div class="footer-logo">
+                <img src="img/img-footer.png" alt="Logo Medica+ no rodapé">
+
+                <div class="social">
+                    <a href="#" aria-label="Medica+ no Instagram"><span></span></a>
+                    <a href="#" aria-label="Medica+ no Facebook"><span></span></a>
+                    <a href="#" aria-label="Medica+ no LinkedIn"><span></span></a>
+                </div>
+            </div>
+
+            <div class="footer-links">
+                <h3>Navegação</h3>
+
+                <ul>
+                    <li><a href="index.html">Início</a></li>
+                    <li><a href="index.html#funcionalidades">Funcionalidades</a></li>
+                    <li><a href="index.html#sobre">Sobre</a></li>
+                    <li><a href="index.html#planos">Planos</a></li>
+                    <li><a href="index.html#contato">Contato</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-links">
+                <h3>Suporte</h3>
+
+                <ul>
+                    <li><a href="">Central de ajuda</a></li>
+                    <li><a href="">Termos de uso</a></li>
+                    <li><a href="">Política de privacidade</a></li>
+                </ul>
+            </div>
+
+            <address class="footer-contact">
+                <h3>Suporte e Contato</h3>
+                <p>
+                    <strong>📧 E-mail:</strong><br>
+                    <a href="mailto:medicamais2026@gmail.com">medicamais2026@gmail.com</a>
+                </p>
+                <p>
+                    <strong>📞 WhatsApp:</strong><br>
+                    <a href="https://wa.me/5511959910948" target="_blank">(11) 95991-0948</a>
+                </p>
+                <p>
+                    <strong>🕒 Horário:</strong><br>
+                    Seg a Sex, das 8h às 18h
+                </p>
+                <p>
+                    <strong>📍 Endereço:</strong><br>
+                    <a href="https://www.google.com/maps/search/Avenida+Inajar+de+Souza, 1234,+São+Paulo" target="_blank">Av. Inajar de Souza, 1234 - São Paulo</a>
+                </p>
+            </address>
+
         </div>
-    </div>
+    </footer>
 
     <script src="api.js"></script>
     <script src="script.js"></script>
-
 </body>
 
 </html>
