@@ -3,7 +3,7 @@
     var destinos = {
         'termos de uso': 'docs/termos-de-uso.pdf',
         'política de privacidade': 'docs/politica-de-privacidade.pdf',
-        'central de ajuda': 'index.html#contato'
+        'central de ajuda': 'ajuda.html'
     };
 
     document.querySelectorAll('footer a').forEach(function (link) {

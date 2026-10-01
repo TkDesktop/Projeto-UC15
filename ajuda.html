@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medica+ - Central de ajuda</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .ajuda-topo { background: #96dcff63; padding: 56px 20px 48px; }
+        .ajuda-topo > div, .ajuda-faq, .ajuda-contato { max-width: 820px; margin: 0 auto; }
+        .ajuda-topo h1 { font-size: 40px; color: #0b1f3a; line-height: 1.2; margin-bottom: 10px; }
+        .ajuda-topo p { font-size: 18px; color: #444; max-width: 560px; }
+        .ajuda-urgencia { margin-top: 22px; padding: 12px 16px; background: #fff; border-left: 5px solid #e63946;
+            border-radius: 8px; font-size: 16px; color: #0b1f3a; max-width: 560px; }
+
+        .ajuda-faq { padding: 44px 20px 20px; }
+        .ajuda-faq h2 { font-size: 22px; color: #0b1f3a; margin: 34px 0 12px; }
+        .ajuda-faq h2:first-child { margin-top: 0; }
+
+        .faq-item { background: #fff; border: 1px solid #e0e6f0; border-radius: 12px; margin-bottom: 10px; }
+        .faq-item[open] { border-color: #2d7ff9; box-shadow: 0 4px 14px rgba(45, 127, 249, .12); }
+        .faq-item summary { list-style: none; cursor: pointer; padding: 16px 52px 16px 18px; position: relative;
+            font-weight: bold; font-size: 17px; color: #0b1f3a; }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: "+"; position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
+            width: 28px; height: 28px; line-height: 26px; text-align: center; border-radius: 50%;
+            background: #eef5ff; color: #2d7ff9; font-size: 22px; transition: transform .2s; }
+        .faq-item[open] summary::after { content: "−"; background: #2d7ff9; color: #fff; }
+        .faq-item summary:focus-visible { outline: 3px solid #2d7ff9; outline-offset: 2px; border-radius: 12px; }
+        .faq-resposta { padding: 0 18px 18px; color: #444; font-size: 16px; }
+        .faq-resposta p + p, .faq-resposta ul { margin-top: 8px; }
+        .faq-resposta ul { list-style: disc; padding-left: 22px; margin-bottom: 0; font-weight: normal; }
+
+        .ajuda-contato { margin: 30px auto 60px; padding: 0 20px; }
+        .ajuda-caixa { background: #fff; border: 1px solid #e0e6f0; border-radius: 18px; padding: 32px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, .06); }
+        .ajuda-caixa h2 { font-size: 26px; color: #0b1f3a; margin-bottom: 6px; }
+        .ajuda-caixa > p { color: #555; margin-bottom: 8px; }
+        .ajuda-linha { display: flex; gap: 14px; flex-wrap: wrap; }
+        .ajuda-linha > div { flex: 1 1 240px; min-width: 0; }
+        .ajuda-caixa label { display: block; font-size: 14px; font-weight: bold; color: #0b1f3a; margin: 16px 0 6px; }
+        .ajuda-caixa input, .ajuda-caixa select, .ajuda-caixa textarea { width: 100%; padding: 13px; border: 1px solid #ccc;
+            border-radius: 8px; font-size: 16px; font-family: inherit; background: #fff; }
+        .ajuda-caixa textarea { min-height: 140px; resize: vertical; }
+        .ajuda-caixa input:focus, .ajuda-caixa select:focus, .ajuda-caixa textarea:focus { outline: none;
+            border-color: #2d7ff9; box-shadow: 0 0 0 3px rgba(45, 127, 249, .2); }
+        .ajuda-enviar { margin-top: 22px; background: #27AE60; color: #fff; border: none; padding: 14px 28px;
+            border-radius: 10px; font-size: 17px; font-weight: bold; cursor: pointer; transition: background-color .2s; }
+        .ajuda-enviar:hover { background: #219150; }
+        .ajuda-msg { margin-top: 14px; font-size: 15px; min-height: 22px; }
+        .ajuda-msg.erro { color: #e53935; }
+        .ajuda-msg.ok { color: #2e7d32; }
+        .ajuda-nota { font-size: 14px; color: #666; margin-top: 4px; }
+        .ajuda-nota a { color: #2d7ff9; font-weight: bold; }
+
+        @media (max-width: 600px) {
+            .ajuda-topo h1 { font-size: 30px; }
+            .ajuda-caixa { padding: 22px 18px; }
+        }
+    </style>
+</head>
+
+<body class="pagina-ajuda">
+
+    <a href="#conteudo" class="skip-link">Pular para o conteúdo</a>
+
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo-link">
+                <img src="img/logo.png" alt="Logo Medica+">
+            </a>
+            <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="menuNav"
+                aria-label="Abrir menu de navegação">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <ul id="menuNav">
+                <li><a href="index.html">Início</a></li>
+                <li><a href="index.html#funcionalidades">Funcionalidades</a></li>
+                <li><a href="index.html#sobre">Sobre</a></li>
+                <li><a href="index.html#planos">Planos</a></li>
+                <li><a href="index.html#contato">Contatos</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main id="conteudo">
+
+        <section class="ajuda-topo">
+            <div>
+                <h1>Como podemos ajudar?</h1>
+                <p>Veja as respostas para as dúvidas mais comuns. Se não resolver, escreva para a gente no fim da página.</p>
+                <p class="ajuda-urgencia">Em caso de emergência, ligue <strong>192 (SAMU)</strong> ou <strong>193 (Bombeiros)</strong>. A Medica+ não substitui o atendimento de urgência.</p>
+            </div>
+        </section>
+
+        <section class="ajuda-faq" aria-label="Perguntas frequentes">
+
+            <h2>Conta e login</h2>
+
+            <details class="faq-item">
+                <summary>Como crio minha conta?</summary>
+                <div class="faq-resposta">
+                    <p>Na tela de <a href="login.html">Login</a>, clique em "Cadastre-se" e preencha nome, CPF, telefone com DDD, e-mail, seu perfil (paciente, cuidador ou parente) e uma senha de no mínimo 6 caracteres.</p>
+                    <p>Depois do cadastro, enviamos um código de 6 números para o seu e-mail. Digite o código para confirmar a conta.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary>Não recebi o código por e-mail. O que faço?</summary>
+                <div class="faq-resposta">
+                    <p>Confira a caixa de spam e lixo eletrônico. Se não estiver lá, use "Esqueceu sua senha?" na tela de login: o código enviado também confirma o seu e-mail.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary>Esqueci minha senha. Como redefinir?</summary>
+                <div class="faq-resposta">
+                    <p>Na tela de login, clique em "Esqueceu sua senha?", informe seu e-mail, digite o código de 6 números que você receber e escolha uma nova senha.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary>Como altero meus dados?</summary>
+                <div class="faq-resposta">
+                    <p>No painel, clique em "Ver meu perfil". Lá você pode alterar telefone, e-mail e foto. Nome, CPF e tipo de perfil não podem ser alterados por lá.</p>
+                    <p>Se trocar o e-mail, enviaremos um novo código e você precisará confirmá-lo antes do próximo acesso.</p>
+                </div>
+            </details>
+
+            <h2>Planos e pagamento</h2>
+
+            <details class="faq-item">
+                <summary>Quais são os planos?</summary>
+                <div class="faq-resposta">
+                    <ul>
+                        <li><strong>Essencial (grátis):</strong> lembrete inteligente, localizador de hospitais e postos e lista de contatos.</li>
+                        <li><strong>Cuidado+ (R$ 59,90/mês):</strong> tudo do Essencial, mais botão SOS e monitoramento.</li>
+                        <li><strong>Cuidado Total (R$ 699,99/ano):</strong> tudo do Cuidado+, mais suporte prioritário e medidor digital.</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary>Como troco de plano?</summary>
+                <div class="faq-resposta">
+                    <p>No painel, abra a seção "Meu plano" e clique em "Trocar para este plano" no plano desejado. Você será levado à tela de pagamento.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary>Quais formas de pagamento são aceitas?</summary>
+                <div class="faq-resposta">
+                    <p>Cartão e Pix. Nós não guardamos o número completo do cartão nem o CVV.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary>Posso cancelar e pedir reembolso?</summary>
+                <div class="faq-resposta">
+                    <p>Contratações pela internet podem ser desfeitas em até 7 dias corridos, com devolução do valor pago. Para cancelar, escreva para a gente pelo formulário abaixo ou pelo e-mail medicamais2026@gmail.com. Veja mais nos <a href="docs/termos-de-uso.pdf" target="_blank" rel="noopener">Termos de uso</a>.</p>
+                </div>
+            </details>
+
+            <h2>Monitoramento e humor</h2>
+
+            <details class="faq-item">
+                <summary>Como registro minha pressão arterial?</summary>
+                <div class="faq-resposta">
+                    <p>No painel, vá em "Monitoramento", informe a sistólica (máxima) e a diastólica (mínima) e clique em "Adicionar medida". A data e a hora são opcionais. Se deixar em branco, usamos o momento atual.</p>
+                    <p>Não é possível registrar medidas com data anterior a hoje nem no futuro.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary>O que significam "alta" e "baixa" nas minhas medidas?</summary>
+                <div class="faq-resposta">
+                    <p>Consideramos alta uma pressão acima de 140/90 e baixa uma pressão abaixo de 90/60. É só um apoio para você acompanhar a evolução. Não é diagnóstico. Converse sempre com um profissional de saúde.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary>Registrei algo errado. Posso apagar?</summary>
+                <div class="faq-resposta">
+                    <p>Sim. No "Histórico de medidas" clique em "Excluir" ao lado do registro. Nos registros de humor, use o "×" ao lado do registro.</p>
+                </div>
+            </details>
+
+            <h2>Contatos e visitas</h2>
+
+            <details class="faq-item">
+                <summary>Como adiciono ou removo um contato?</summary>
+                <div class="faq-resposta">
+                    <p>No painel, abra "Contatos" e clique na aba "Adicionar contato". Informe nome, telefone e o tipo (familiar, cuidador, médico ou outro). Para remover, use "Remover" na aba "Meus contatos".</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary>Como agendo, reagendo ou cancelo uma visita?</summary>
+                <div class="faq-resposta">
+                    <p>Na seção "Suporte prioritário" do painel, escolha uma data e hora futuras e clique em "Agendar visita". Para mudar, use "Reagendar" e, para desistir, "Cancelar visita".</p>
+                </div>
+            </details>
+
+        </section>
+
+        <section class="ajuda-contato" id="falar-conosco">
+            <div class="ajuda-caixa">
+                <h2>Não encontrou o que procurava?</h2>
+                <p>Escreva sua dúvida e responderemos por e-mail. Atendemos de segunda a sexta, das 8h às 18h.</p>
+
+                <form id="formAjuda" novalidate>
+                    <div class="ajuda-linha">
+                        <div>
+                            <label for="ajuda-nome">Seu nome</label>
+                            <input type="text" id="ajuda-nome" autocomplete="name">
+                        </div>
+                        <div>
+                            <label for="ajuda-email">Seu e-mail</label>
+                            <input type="email" id="ajuda-email" autocomplete="email">
+                        </div>
+                    </div>
+
+                    <label for="ajuda-assunto">Assunto</label>
+                    <select id="ajuda-assunto">
+                        <option>Conta e login</option>
+                        <option>Planos e pagamento</option>
+                        <option>Monitoramento e humor</option>
+                        <option>Contatos e visitas</option>
+                        <option>Outro assunto</option>
+                    </select>
+
+                    <label for="ajuda-mensagem">Sua mensagem</label>
+                    <textarea id="ajuda-mensagem" maxlength="1500" placeholder="Conte o que aconteceu e, se puder, em que tela."></textarea>
+
+                    <button type="submit" class="ajuda-enviar">Enviar por e-mail</button>
+                    <p class="ajuda-msg" id="ajuda-msg" role="status" aria-live="polite"></p>
+                    <p class="ajuda-nota">O botão abre o seu aplicativo de e-mail com a mensagem pronta. Se ele não abrir, escreva direto para <a href="mailto:medicamais2026@gmail.com">medicamais2026@gmail.com</a>.</p>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <div class="footer-container">
+
+            <div class="footer-logo">
+                <img src="img/img-footer.png" alt="Logo Medica+ no rodapé">
+            </div>
+
+            <div class="footer-links">
+                <h3>Navegação</h3>
+                <ul>
+                    <li><a href="index.html">Início</a></li>
+                    <li><a href="index.html#funcionalidades">Funcionalidades</a></li>
+                    <li><a href="index.html#sobre">Sobre</a></li>
+                    <li><a href="index.html#planos">Planos</a></li>
+                    <li><a href="index.html#contato">Contato</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-links">
+                <h3>Suporte</h3>
+                <ul>
+                    <li><a href="ajuda.html">Central de ajuda</a></li>
+                    <li><a href="docs/termos-de-uso.pdf" target="_blank" rel="noopener">Termos de uso</a></li>
+                    <li><a href="docs/politica-de-privacidade.pdf" target="_blank" rel="noopener">Política de privacidade</a></li>
+                </ul>
+            </div>
+
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        (function () {
+            /* Menu mobile */
+            var botao = document.getElementById('menuToggle');
+            var menu = document.getElementById('menuNav');
+            function definir(aberto) {
+                menu.classList.toggle('aberto', aberto);
+                botao.setAttribute('aria-expanded', String(aberto));
+                botao.setAttribute('aria-label', aberto ? 'Fechar menu de navegação' : 'Abrir menu de navegação');
+            }
+            botao.addEventListener('click', function () { definir(!menu.classList.contains('aberto')); });
+            menu.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', function () { definir(false); }); });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') definir(false); });
+
+            /* FAQ: abrir uma pergunta fecha as outras */
+            var itens = document.querySelectorAll('.faq-item');
+            itens.forEach(function (item) {
+                item.addEventListener('toggle', function () {
+                    if (!item.open) return;
+                    itens.forEach(function (outro) { if (outro !== item) outro.open = false; });
+                });
+            });
+
+            /* Formulário: monta o e-mail e abre o aplicativo de e-mail do usuário */
+            var form = document.getElementById('formAjuda');
+            var msg = document.getElementById('ajuda-msg');
+            function aviso(texto, tipo) { msg.textContent = texto; msg.className = 'ajuda-msg ' + tipo; }
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var nome = document.getElementById('ajuda-nome').value.trim();
+                var email = document.getElementById('ajuda-email').value.trim();
+                var assunto = document.getElementById('ajuda-assunto').value;
+                var texto = document.getElementById('ajuda-mensagem').value.trim();
+
+                if (!nome) return aviso('Digite seu nome.', 'erro');
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return aviso('Digite um e-mail válido, como exemplo@gmail.com.', 'erro');
+                if (texto.length < 10) return aviso('Escreva sua dúvida com pelo menos 10 caracteres.', 'erro');
+
+                var corpo = 'Nome: ' + nome + '\nE-mail para resposta: ' + email + '\n\n' + texto;
+                window.location.href = 'mailto:medicamais2026@gmail.com' +
+                    '?subject=' + encodeURIComponent('[Central de ajuda] ' + assunto) +
+                    '&body=' + encodeURIComponent(corpo);
+                aviso('Abrimos seu aplicativo de e-mail com a mensagem pronta. É só enviar.', 'ok');
+            });
+        })();
+    </script>
+
+</body>
+
+</html>
