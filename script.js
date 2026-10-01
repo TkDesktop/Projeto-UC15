@@ -56,6 +56,10 @@
             link: menuNav ? menuNav.querySelector('a[href="#funcionalidades"]') : null
         },
         {
+            el: document.querySelector('#sobre'),
+            link: menuNav ? menuNav.querySelector('a[href="#sobre"]') : null
+        },
+        {
             el: document.querySelector('#planos'),
             link: menuNav ? menuNav.querySelector('a[href="#planos"]') : null
         },
@@ -135,6 +139,37 @@
 /* ====== CHECKOUT ====== */
 (function () {
     if (!document.querySelector('.checkout')) return;
+
+    /*  MENU MOBILE */
+    var menuToggleCk = document.getElementById('menuToggle');
+    var menuNavCk = document.getElementById('menuNav');
+
+    if (menuToggleCk && menuNavCk) {
+        var definirMenuCk = function (aberto) {
+            menuNavCk.classList.toggle('aberto', aberto);
+            menuToggleCk.setAttribute('aria-expanded', String(aberto));
+            menuToggleCk.setAttribute('aria-label',
+                aberto ? 'Fechar menu de navegação' : 'Abrir menu de navegação');
+        };
+
+        menuToggleCk.addEventListener('click', function () {
+            definirMenuCk(!menuNavCk.classList.contains('aberto'));
+        });
+
+        menuNavCk.querySelectorAll('a').forEach(function (link) {
+            link.addEventListener('click', function () { definirMenuCk(false); });
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!menuNavCk.contains(e.target) && !menuToggleCk.contains(e.target)) {
+                definirMenuCk(false);
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') definirMenuCk(false);
+        });
+    }
 
     var params = new URLSearchParams(window.location.search);
     var nomePlano = params.get('plano') || 'Basic';
@@ -337,6 +372,10 @@
         var overlay = document.getElementById('overlay-sucesso');
         document.getElementById('sucesso-texto').textContent = texto;
         overlay.classList.add('ativo');
+
+        setTimeout(function () {
+            window.location.href = 'logado.html';
+        }, 2500);
     }
 })();
 
@@ -2205,4 +2244,3 @@ document.addEventListener('DOMContentLoaded', async () => {
         campoCpf.value = valor;
     });
 })();
-

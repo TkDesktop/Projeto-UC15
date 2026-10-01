@@ -307,7 +307,7 @@ nav a[aria-current="page"] {
 }
  
 .card-func.sos {
-    background-color: ffffrgb(240, 108, 108);
+    background-color: #fde8e9;
     border: 2px solid red
 }
  
@@ -2904,4 +2904,149 @@ body.pagina-login .erro-campo.sucesso{
     color: #4a5568;
     font-size: 18px;
     margin: 10px 0;
+}
+
+/* ====== CORREÇÕES DO CHECKOUT ====== */
+
+/* ---------- CHECKOUT ---------- */
+
+body.pagina-checkout .checkout {
+    margin: 40px auto;
+    width: calc(100% - 32px);
+}
+
+/* Resumo do plano (h2 + duas linhas "Plano:" / "Valor:") */
+.checkout .resumo {
+    display: block;
+}
+
+.resumo h2 {
+    font-size: 13px;
+    font-weight: normal;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.resumo p {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px;
+    color: #555;
+    margin: 4px 0;
+}
+
+.resumo strong {
+    font-size: 20px;
+    color: #0b1f3a;
+}
+
+#resumo-preco {
+    color: #27AE60;
+}
+
+/* Abas Cartão / Pix */
+.metodos button {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #ddd;
+    background: #fff;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #555;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.metodos button.ativo {
+    border-color: #2d7ff9;
+    color: #2d7ff9;
+    background: #eef5ff;
+}
+
+/* Formulário de cartão */
+#form-cartao h3,
+#form-pix h3 {
+    font-size: 18px;
+    color: #0b1f3a;
+    margin-bottom: 4px;
+}
+
+.form-group {
+    margin-top: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: bold;
+    color: #0b1f3a;
+    margin-bottom: 6px;
+}
+
+.form-group input,
+.pix-container input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    outline: none;
+}
+
+.form-group input:focus,
+.pix-container input:focus {
+    border-color: #2d7ff9;
+    box-shadow: 0 0 0 2px rgba(45, 127, 249, 0.2);
+}
+
+.form-row {
+    display: flex;
+    gap: 14px;
+}
+
+.form-row .form-group {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Pix */
+#form-pix p {
+    font-size: 14px;
+    color: #555;
+    margin: 10px 0 14px;
+}
+
+.pix-container {
+    display: flex;
+    gap: 8px;
+}
+
+.pix-container input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    padding: 12px;
+    font-size: 13px;
+    color: #666;
+}
+
+.pix-container button {
+    padding: 0 18px;
+    border: none;
+    border-radius: 8px;
+    background: #2d7ff9;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.pix-container button:hover {
+    background: #1b65d6;
+}
+
+.btn-pagar:disabled {
+    opacity: .6;
+    cursor: not-allowed;
 }
