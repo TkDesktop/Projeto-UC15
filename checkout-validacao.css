@@ -1,0 +1,24 @@
+/* Validação do cartão no checkout: bandeira, Mod 10 e validade */
+.cartao-info {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  min-height: 24px; margin-top: 6px; font-size: 13px;
+}
+.bandeira-chip {
+  display: inline-block; padding: 3px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; color: #fff; background: #6b7280;
+}
+.bandeira-visa { background: #1a1f71; }
+.bandeira-mastercard { background: #eb001b; }
+.bandeira-amex { background: #2e77bb; }
+.bandeira-elo { background: #111827; }
+.bandeira-hipercard { background: #b3131b; }
+.bandeira-diners { background: #0079be; }
+.bandeira-discover { background: #f76f20; }
+.bandeira-jcb { background: #0b7a3d; }
+.bandeira-desconhecida { background: #9ca3af; }
+.cartao-status.ok { color: #2e9e3f; font-weight: 600; }
+.cartao-status.erro { color: #e63946; font-weight: 600; }
+.form-group input.campo-ok { border-color: #2e9e3f; }
+.form-group input.campo-erro { border-color: #e63946; }
+.campo-msg { display: block; min-height: 16px; margin-top: 4px; font-size: 12px; color: #e63946; }
+.campo-msg.ok { color: #2e9e3f; }

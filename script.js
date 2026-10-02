@@ -159,6 +159,104 @@
 
 
 /* ====== CHECKOUT ====== */
+/* ====== VALIDAÇÃO DE CARTÃO (bandeira, Mod 10 e validade) ====== */
+// Faixas de BIN (6 primeiros dígitos) do Elo. Não existe lista oficial pública e ela muda com o tempo.
+var FAIXAS_ELO = [
+    [401178, 401179], [431274, 431274], [438935, 438935], [451416, 451416], [457393, 457393],
+    [457631, 457632], [504175, 504175], [506699, 506778], [509000, 509999], [627780, 627780],
+    [636297, 636297], [636368, 636369], [650031, 650033], [650035, 650051], [650405, 650439],
+    [650485, 650538], [650541, 650598], [650700, 650718], [650720, 650727], [650901, 650920],
+    [651652, 651679], [655000, 655019], [655021, 655058]
+];
+
+function prefixoEntre(digitos, tamanho, minimo, maximo) {
+    if (digitos.length < tamanho) return false;
+    var prefixo = parseInt(digitos.slice(0, tamanho), 10);
+    return prefixo >= minimo && prefixo <= maximo;
+}
+
+// A ordem importa: bandeiras mais específicas antes das mais genéricas.
+var BANDEIRAS_CARTAO = [
+    { id: 'elo', nome: 'Elo', tamanhos: [16], cvv: 3, formato: [4, 4, 4, 4],
+      reconhece: function (d) { return FAIXAS_ELO.some(function (f) { return prefixoEntre(d, 6, f[0], f[1]); }); } },
+    { id: 'hipercard', nome: 'Hipercard', tamanhos: [16], cvv: 3, formato: [4, 4, 4, 4],
+      reconhece: function (d) { return /^(606282|3841)/.test(d); } },
+    { id: 'amex', nome: 'American Express', tamanhos: [15], cvv: 4, formato: [4, 6, 5],
+      reconhece: function (d) { return /^3[47]/.test(d); } },
+    { id: 'diners', nome: 'Diners Club', tamanhos: [14], cvv: 3, formato: [4, 6, 4],
+      reconhece: function (d) { return /^(30[0-5]|3095|36|38|39)/.test(d); } },
+    { id: 'jcb', nome: 'JCB', tamanhos: [16], cvv: 3, formato: [4, 4, 4, 4],
+      reconhece: function (d) { return prefixoEntre(d, 4, 3528, 3589); } },
+    { id: 'mastercard', nome: 'Mastercard', tamanhos: [16], cvv: 3, formato: [4, 4, 4, 4],
+      reconhece: function (d) { return prefixoEntre(d, 2, 51, 55) || prefixoEntre(d, 4, 2221, 2720); } },
+    { id: 'visa', nome: 'Visa', tamanhos: [13, 16], cvv: 3, formato: [4, 4, 4, 4],
+      reconhece: function (d) { return /^4/.test(d); } },
+    { id: 'discover', nome: 'Discover', tamanhos: [16], cvv: 3, formato: [4, 4, 4, 4],
+      reconhece: function (d) { return /^(6011|64[4-9]|65)/.test(d); } }
+];
+
+// Recebe só dígitos. Retorna a bandeira ou null (Elo só é reconhecido a partir de 6 dígitos).
+function detectarBandeiraCartao(digitos) {
+    for (var i = 0; i < BANDEIRAS_CARTAO.length; i++) {
+        if (BANDEIRAS_CARTAO[i].reconhece(digitos)) return BANDEIRAS_CARTAO[i];
+    }
+    return null;
+}
+
+function tamanhoMaximoCartao(bandeira) {
+    return bandeira ? Math.max.apply(null, bandeira.tamanhos) : 16;
+}
+
+function formatarNumeroCartao(digitos, formato) {
+    var partes = [];
+    var inicio = 0;
+    formato.forEach(function (tamanho) {
+        if (digitos.length > inicio) partes.push(digitos.slice(inicio, inicio + tamanho));
+        inicio += tamanho;
+    });
+    return partes.join(' ');
+}
+
+// Algoritmo de Luhn (Mod 10): a partir da direita, dobra um dígito sim, um não.
+function luhnValido(numero) {
+    if (!/^\d{12,19}$/.test(numero)) return false;
+    var soma = 0;
+    var dobrar = false;
+    for (var i = numero.length - 1; i >= 0; i--) {
+        var digito = parseInt(numero.charAt(i), 10);
+        if (dobrar) {
+            digito *= 2;
+            if (digito > 9) digito -= 9;
+        }
+        soma += digito;
+        dobrar = !dobrar;
+    }
+    return soma % 10 === 0;
+}
+
+// O cartão vale até o último dia do mês de validade.
+function validarValidadeCartao(texto, agora) {
+    agora = agora || new Date();
+    if (!/^\d{2}\/\d{2}$/.test(texto)) {
+        return { ok: false, mensagem: 'Validade deve estar no formato MM/AA.' };
+    }
+    var mes = parseInt(texto.slice(0, 2), 10);
+    var ano = 2000 + parseInt(texto.slice(3), 10);
+    if (mes < 1 || mes > 12) {
+        return { ok: false, mensagem: 'O mês da validade deve estar entre 01 e 12.' };
+    }
+    var anoAtual = agora.getFullYear();
+    var mesAtual = agora.getMonth() + 1;
+    if (ano < anoAtual || (ano === anoAtual && mes < mesAtual)) {
+        return { ok: false, mensagem: 'Cartão vencido: a validade informada já passou.' };
+    }
+    if (ano > anoAtual + 20) {
+        return { ok: false, mensagem: 'Confira o ano da validade: a data está muito distante.' };
+    }
+    return { ok: true, mensagem: '' };
+}
+
+
 (function () {
     if (!document.querySelector('.checkout')) return;
 
@@ -285,10 +383,61 @@
     var campoValidade = document.getElementById('validade');
     var campoCvv = document.getElementById('cvv');
 
+    var infoCartao = document.getElementById('info-cartao');
+    var msgValidade = document.getElementById('msg-validade');
+
+    function limparInfoCartao() {
+        infoCartao.textContent = '';
+        campoNumero.classList.remove('campo-ok', 'campo-erro');
+    }
+
+    function mostrarInfoCartao(digitos) {
+        var bandeira = detectarBandeiraCartao(digitos);
+        limparInfoCartao();
+        if (digitos.length < 2) return;
+
+        var chip = document.createElement('span');
+        chip.className = 'bandeira-chip bandeira-' + (bandeira ? bandeira.id : 'desconhecida');
+        chip.textContent = bandeira ? bandeira.nome : 'Bandeira não reconhecida';
+        infoCartao.appendChild(chip);
+
+        // O Mod 10 só é conferido com o número completo (para não acusar erro durante a digitação)
+        if (bandeira && digitos.length === tamanhoMaximoCartao(bandeira)) {
+            var valido = luhnValido(digitos);
+            var status = document.createElement('span');
+            status.className = 'cartao-status ' + (valido ? 'ok' : 'erro');
+            status.textContent = valido ? '✔ Número válido' : '✖ Número inválido: confira os dígitos';
+            infoCartao.appendChild(status);
+            campoNumero.classList.add(valido ? 'campo-ok' : 'campo-erro');
+        }
+    }
+
     campoNumero.addEventListener('input', function () {
-        var limpo = campoNumero.value.replace(/\D/g, '').slice(0, 16);
-        campoNumero.value = limpo.replace(/(\d{4})(?=\d)/g, '$1 ');
+        var digitos = campoNumero.value.replace(/\D/g, '');
+        var bandeira = detectarBandeiraCartao(digitos);
+        digitos = digitos.slice(0, tamanhoMaximoCartao(bandeira));
+        bandeira = detectarBandeiraCartao(digitos);
+        campoNumero.value = formatarNumeroCartao(digitos, bandeira ? bandeira.formato : [4, 4, 4, 4]);
+
+        // American Express tem CVV de 4 dígitos; as demais, 3
+        var tamanhoCvv = bandeira ? bandeira.cvv : 4;
+        campoCvv.maxLength = tamanhoCvv;
+        campoCvv.value = campoCvv.value.slice(0, tamanhoCvv);
+
+        mostrarInfoCartao(digitos);
     });
+
+    function conferirValidade() {
+        campoValidade.classList.remove('campo-ok', 'campo-erro');
+        msgValidade.textContent = '';
+        msgValidade.className = 'campo-msg';
+        if (campoValidade.value.length < 5) return;
+
+        var resultado = validarValidadeCartao(campoValidade.value);
+        campoValidade.classList.add(resultado.ok ? 'campo-ok' : 'campo-erro');
+        msgValidade.textContent = resultado.ok ? '✔ Validade ok' : resultado.mensagem;
+        if (resultado.ok) msgValidade.className = 'campo-msg ok';
+    }
 
     campoValidade.addEventListener('input', function () {
         var limpo = campoValidade.value.replace(/\D/g, '').slice(0, 4);
@@ -297,10 +446,12 @@
         } else {
             campoValidade.value = limpo;
         }
+        conferirValidade();
     });
+    campoValidade.addEventListener('blur', conferirValidade);
 
     campoCvv.addEventListener('input', function () {
-        campoCvv.value = campoCvv.value.replace(/\D/g, '').slice(0, 4);
+        campoCvv.value = campoCvv.value.replace(/\D/g, '').slice(0, campoCvv.maxLength > 0 ? campoCvv.maxLength : 4);
     });
 
     /*  PAGAMENTO POR CARTÃO */
@@ -319,24 +470,28 @@
             mostrarMsg(msgCartao, 'Digite o nome como está no cartão.', 'erro');
             return;
         }
-        if (numero.length < 13 || numero.length > 16) {
-            mostrarMsg(msgCartao, 'O número do cartão deve ter entre 13 e 16 dígitos.', 'erro');
+        var bandeira = detectarBandeiraCartao(numero);
+        if (!bandeira) {
+            mostrarMsg(msgCartao, 'Não reconhecemos a bandeira deste cartão. Confira o número digitado.', 'erro');
             return;
         }
-        if (!/^\d{2}\/\d{2}$/.test(validade)) {
-            mostrarMsg(msgCartao, 'Validade deve estar no formato MM/AA.', 'erro');
+        if (bandeira.tamanhos.indexOf(numero.length) === -1) {
+            mostrarMsg(msgCartao, 'O número do cartão ' + bandeira.nome + ' deve ter ' + bandeira.tamanhos.join(' ou ') + ' dígitos.', 'erro');
             return;
         }
-        var mes = parseInt(validade.split('/')[0], 10);
-        if (mes < 1 || mes > 12) {
-            mostrarMsg(msgCartao, 'O mês da validade deve estar entre 01 e 12.', 'erro');
+        if (!luhnValido(numero)) {
+            mostrarMsg(msgCartao, 'Número de cartão inválido. Confira os dígitos digitados.', 'erro');
             return;
         }
-        if (cvv.length < 3) {
-            mostrarMsg(msgCartao, 'O CVV deve ter pelo menos 3 dígitos.', 'erro');
+        var resultadoValidade = validarValidadeCartao(validade);
+        if (!resultadoValidade.ok) {
+            mostrarMsg(msgCartao, resultadoValidade.mensagem, 'erro');
             return;
         }
-
+        if (cvv.length !== bandeira.cvv) {
+            mostrarMsg(msgCartao, 'O CVV do ' + bandeira.nome + ' deve ter ' + bandeira.cvv + ' dígitos.', 'erro');
+            return;
+        }
         var btnPagar = document.getElementById('btn-pagar-cartao');
         btnPagar.disabled = true;
         btnPagar.textContent = 'Processando...';
