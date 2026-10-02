@@ -79,8 +79,10 @@
         <div id="form-pix" class="escondido">
             <h3>Pagamento com Pix</h3>
             <p>Escaneie o QR Code ou copie o código abaixo:</p>
+            <!-- O pix.js desenha o QR Code aqui (e a legenda com plano e valor logo abaixo) -->
+            <div class="pix-qr" aria-hidden="true"></div>
             <div class="pix-container">
-                <input type="text" id="codigo-pix" readonly value="00020126580014br.gov.bcb.pix0136medicamais-pix@example.com520400005303986540510.005802BR5913MEDICA MAIS LTDA6009SAO PAULO62070503***6304ABCD">
+                <input type="text" id="codigo-pix" readonly value="" placeholder="Gerando o código Pix...">
                 <button type="button" id="btn-copiar-pix">Copiar</button>
             </div>
             <button type="button" id="btn-confirmar-pix" class="btn-pagar">Já paguei</button>
@@ -156,6 +158,7 @@
 
     <script src="api.js"></script>
     <script src="script.js"></script>
+    <script src="sessao.js"></script>
     <script src="pix.js"></script>
 </body>
 
