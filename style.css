@@ -3152,3 +3152,31 @@ body.pagina-logado .footer-links ul {
 .contato-card a:hover {
     text-decoration: underline;
 }
+
+/* Alinhamento dos benefícios dos planos */
+.card-essencial ul li,
+.card-cuidado ul li,
+.card-cuidado-total ul li {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 10px;
+    text-align: left;
+}
+
+.card-essencial ul li img,
+.card-cuidado ul li img,
+.card-cuidado-total ul li img {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    margin-top: 4px;
+}
+
+.card-essencial ul li span,
+.card-cuidado ul li span,
+.card-cuidado-total ul li span {
+    display: block;
+    flex: 1;
+    text-align: left;
+}
