@@ -19,11 +19,11 @@
         demonstracao: true,
 
         // Chave aleatoria FICTICIA (formato valido, mas nao existe no Pix).
-        chave: '00000000-0000-4000-8000-000000000000',
+        chave: '55696100813',
         nome: 'MEDICA MAIS',  // ate 25 caracteres, sem acento
         cidade: 'SAO PAULO'        // ate 15 caracteres, sem acento
     };
-    var CHAVE_PADRAO = '55696100813'; // so vale se demonstracao = false
+    var CHAVE_PADRAO = '7f3c9a21-6b54-4d87-a102-e8c5f6b9d314'; // so vale se demonstracao = false
 
     // ---------------------------------------------------------------
     // BR CODE (padrao EMV do Banco Central)
