@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página não encontrada - Medica+</title>
+    <meta name="robots" content="noindex">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #0b1f3a;
+            background: #96dcff63;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header { padding: 20px 24px; }
+        header img { height: 44px; display: block; }
+
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 20px 56px;
+        }
+
+        .erro { max-width: 560px; width: 100%; }
+
+        .codigo { font-size: 96px; font-weight: bold; line-height: 1; color: #2d7ff9; letter-spacing: -2px; }
+
+        .pulso { width: 100%; max-width: 320px; height: 70px; margin: 8px 0 18px; display: block; }
+        .pulso path { fill: none; stroke: #e63946; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+        .pulso .batida { stroke-dasharray: 260; stroke-dashoffset: 260; animation: desenhar 1.6s ease-out forwards; }
+        .pulso .reta { stroke: #9aa8bd; stroke-dasharray: 2 8; }
+
+        @keyframes desenhar { to { stroke-dashoffset: 0; } }
+
+        h1 { font-size: 32px; line-height: 1.2; margin-bottom: 10px; }
+        p { font-size: 18px; color: #444; line-height: 1.5; margin-bottom: 28px; max-width: 480px; }
+
+        .acoes { display: flex; flex-wrap: wrap; gap: 12px; }
+
+        .acoes a {
+            display: inline-block;
+            padding: 14px 26px;
+            border-radius: 10px;
+            font-size: 17px;
+            font-weight: bold;
+            text-decoration: none;
+            transition: background-color .2s, transform .2s;
+        }
+
+        .primario { background: #27AE60; color: #fff; }
+        .primario:hover { background: #219150; }
+        .secundario { background: #fff; color: #2d7ff9; border: 2px solid #2d7ff9; }
+        .secundario:hover { background: #eef5ff; }
+        .acoes a:active { transform: scale(.98); }
+        .acoes a:focus-visible, .atalhos a:focus-visible { outline: 3px solid #2d7ff9; outline-offset: 3px; }
+
+        .atalhos { margin-top: 32px; font-size: 15px; color: #555; }
+        .atalhos a { color: #2d7ff9; font-weight: bold; text-decoration: none; margin-right: 14px; }
+        .atalhos a:hover { text-decoration: underline; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .pulso .batida { animation: none; stroke-dashoffset: 0; }
+        }
+
+        @media (max-width: 480px) {
+            .codigo { font-size: 72px; }
+            h1 { font-size: 26px; }
+            p { font-size: 16px; }
+            .acoes a { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <a href="index.html" aria-label="Medica+, ir para a página inicial">
+            <img src="img/logo.png" alt="Logo Medica+">
+        </a>
+    </header>
+
+    <main>
+        <section class="erro">
+            <div class="codigo" aria-hidden="true">404</div>
+
+            <svg class="pulso" viewBox="0 0 320 70" role="img" aria-label="Linha de batimento cardíaco que termina reta">
+                <path class="batida" d="M0 40 H70 L82 40 L92 12 L106 62 L118 26 L126 40 H170"/>
+                <path class="reta" d="M176 40 H316"/>
+            </svg>
+
+            <h1>Página não encontrada</h1>
+            <p>O endereço que você tentou abrir não existe ou foi movido. Confira se digitou certo ou volte para um destes lugares.</p>
+
+            <div class="acoes">
+                <a href="index.html" class="primario">Voltar ao início</a>
+                <a href="ajuda.html" class="secundario">Central de ajuda</a>
+            </div>
+
+            <nav class="atalhos" aria-label="Atalhos">
+                Ou vá para:
+                <a href="index.html#planos">Planos</a>
+                <a href="login.html">Login</a>
+                <a href="index.html#contato">Contato</a>
+            </nav>
+        </section>
+    </main>
+
+</body>
+
+</html>

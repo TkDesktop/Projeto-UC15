@@ -1,9 +1,4 @@
-/* ==========================================================
-   sessao.js - login entre as paginas, checkout protegido e logo.
-   Carregar DEPOIS do script.js em index.html, logado.html e checkout.html:
-   <script src="sessao.js"></script>
-   Nao depende do api.js (le a sessao direto do localStorage).
-   ========================================================== */
+
 (function () {
     var CHAVE_TOKEN = 'medicaMaisToken';
     var CHAVE_EXPIRA = 'medicaMaisTokenExpira';
