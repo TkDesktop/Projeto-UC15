@@ -1,17 +1,21 @@
-/* 
-   mapa.js - Hospitais e Postos perto de voce (mapa.html)
+/*
+   mapa.js - Hospitais e Postos perto de voce (secao #hospitais do logado.html)
    Mapa: Leaflet + OpenStreetMap.  Dados: Overpass API (OSM).
    Busca de enderecos: Nominatim (OSM).  Sem chave de API.
-   Carregar DEPOIS de leaflet.js, api.js e sessao.js.
-    */
+
+   Ordem dos scripts no logado.html:
+   leaflet.js -> api.js -> script.js -> mapa.js
+
+   Nao usa sessao.js e nao grava nada no navegador alem do cache de buscas
+   (sessionStorage). O plano vem da propria conta (api.perfil / sessao do painel).
+*/
 (function (raiz) {
     'use strict';
 
-    /* 
+    /* ---------------------------------------------------------------
        CONFIGURACAO
-    */
-    var CHAVE_PLANO = 'medicaMaisPlano';
-    var CHAVE_SESSAO_USUARIO = 'medicaMaisUsuarioLogado';
+       --------------------------------------------------------------- */
+    var CHAVE_SESSAO_USUARIO = 'medicaMaisUsuarioLogado'; // mesma chave do script.js
     var CENTRO_PADRAO = { lat: -23.5505, lon: -46.6333 }; // Sao Paulo
     var ENDPOINTS = [
         'https://overpass-api.de/api/interpreter',
@@ -27,8 +31,12 @@
         farmacia: { rotulo: 'Farmácia', emoji: '💊' }
     };
 
+    // Mesma ordem do enum do back-end: 0 = Essencial, 1 = Cuidado+, 2 = Cuidado Total
+    var ORDEM_PLANOS = ['essencial', 'cuidado', 'total'];
+    var TODOS_RAIOS = [2, 5, 10, 20];
+
     // O "Localizador de Hospitais e Postos" existe nos TRES planos (conforme a home).
-    // O que muda por plano e o que o mapa oferece alem do basico. Edite aqui.
+    // O que muda por plano e o raio de busca e o que o mapa oferece alem do basico.
     var PLANOS = {
         essencial: {
             chave: 'essencial', nome: 'Essencial',
@@ -62,7 +70,9 @@
         }
     };
 
-    //funcoes puras
+    /* ---------------------------------------------------------------
+       FUNCOES PURAS
+       --------------------------------------------------------------- */
     function semAcento(t) {
         return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     }
@@ -76,14 +86,31 @@
         return null;
     }
 
-    // O back devolve "plano" no perfil. Hoje o formato ainda nao esta confirmado:
-    // so aceitamos texto ou objeto com nome; numero e ignorado (nao da para adivinhar o enum).
-    function planoDaApi(perfil) {
-        var p = perfil && perfil.plano;
-        if (!p) return null;
-        if (typeof p === 'string') return chaveDoNome(p);
-        if (typeof p === 'object') return chaveDoNome(p.nome || p.name || p.tipo);
+    // Aceita o que o back devolve em "plano": numero (0/1/2), texto ou objeto com nome.
+    // Sem plano (null) devolve null: quem chama usa o Essencial.
+    function chaveDoPlano(p) {
+        if (p === null || p === undefined || p === '') return null;
+        if (typeof p === 'number') return ORDEM_PLANOS[p] || null;
+        if (typeof p === 'string') {
+            if (/^\d+$/.test(p.trim())) return ORDEM_PLANOS[parseInt(p, 10)] || null;
+            return chaveDoNome(p);
+        }
+        if (typeof p === 'object') {
+            return chaveDoPlano(p.nome !== undefined ? p.nome : (p.name !== undefined ? p.name : p.tipo));
+        }
         return null;
+    }
+
+    function planoDaApi(perfil) {
+        return chaveDoPlano(perfil && perfil.plano);
+    }
+
+    // Menor plano que libera um raio (para mostrar o cadeado na lista)
+    function planoMinimoDoRaio(raio) {
+        for (var i = 0; i < ORDEM_PLANOS.length; i++) {
+            if (PLANOS[ORDEM_PLANOS[i]].raios.indexOf(raio) >= 0) return ORDEM_PLANOS[i];
+        }
+        return 'total';
     }
 
     function distanciaKm(lat1, lon1, lat2, lon2) {
@@ -197,6 +224,7 @@
 
     /* ---------------------------------------------------------------
        REDE: Overpass com cache e servidor reserva
+       (so servicos publicos do OpenStreetMap; nada do back-end da Medica+)
        --------------------------------------------------------------- */
     function lerCache(chave) {
         try {
@@ -252,47 +280,21 @@
     }
 
     /* ---------------------------------------------------------------
-       PLANO DO USUARIO
+       PLANO DO USUARIO (vem da conta, igual ao resto do painel)
        --------------------------------------------------------------- */
-    function idUsuario() {
+    // Leitura imediata: o script.js do painel ja guardou o perfil nesta chave
+    function planoDaSessao() {
         try {
             var u = JSON.parse(localStorage.getItem(CHAVE_SESSAO_USUARIO)) || {};
-            return String(u.id !== undefined ? u.id : (u.email || ''));
-        } catch (e) { return ''; }
-    }
-
-    function planoSalvo() {
-        try {
-            var p = JSON.parse(localStorage.getItem(CHAVE_PLANO));
-            if (!p) return null;
-            if (p.usuario && p.usuario !== idUsuario()) return null; // plano de outra conta
-            var k = chaveDoNome(p.nome);
-            return k ? { chave: k, origem: p.origem || 'salvo' } : null;
+            return planoDaApi(u);
         } catch (e) { return null; }
-    }
-
-    function salvarPlanoSimulado(chave) {
-        try {
-            localStorage.setItem(CHAVE_PLANO, JSON.stringify({
-                nome: PLANOS[chave].nome, origem: 'simulacao', usuario: idUsuario(), quando: new Date().toISOString()
-            }));
-        } catch (e) { /* sem armazenamento */ }
-    }
-
-    async function descobrirPlano() {
-        try {
-            var perfil = await api.perfil();
-            var k = planoDaApi(perfil);
-            if (k) return { chave: k, origem: 'api' };
-        } catch (e) { /* segue com o plano salvo */ }
-        return planoSalvo() || { chave: 'essencial', origem: 'padrao' };
     }
 
     /* ---------------------------------------------------------------
        INTERFACE
        --------------------------------------------------------------- */
     function iniciarPagina() {
-        if (typeof exigirLogin === 'function' && !exigirLogin()) return;
+        if (typeof obterToken === 'function' && !obterToken()) return; // o script.js ja redireciona ao login
 
         var $ = function (id) { return document.getElementById(id); };
         var estado = {
@@ -313,17 +315,6 @@
             s.className = 'mm-status' + (tipo ? ' mm-' + tipo : '');
         }
 
-        /* ----- menu mobile ----- */
-        (function () {
-            var botao = $('menuToggle'), menu = $('menuNav');
-            if (!botao || !menu) return;
-            botao.addEventListener('click', function () {
-                var aberto = menu.classList.toggle('aberto');
-                botao.setAttribute('aria-expanded', String(aberto));
-                botao.setAttribute('aria-label', aberto ? 'Fechar menu de navegação' : 'Abrir menu de navegação');
-            });
-        })();
-
         /* ----- mapa ----- */
         estado.mapa = L.map('mapa').setView([CENTRO_PADRAO.lat, CENTRO_PADRAO.lon], 12);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -331,7 +322,12 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(estado.mapa);
         estado.camada = L.layerGroup().addTo(estado.mapa);
-        setTimeout(function () { estado.mapa.invalidateSize(); }, 250);
+
+        // A secao fica no meio da pagina: recalcula o tamanho quando tudo carregar ou a janela mudar
+        var recalcular = function () { if (estado.mapa) estado.mapa.invalidateSize(); };
+        setTimeout(recalcular, 250);
+        window.addEventListener('load', recalcular);
+        window.addEventListener('resize', recalcular);
 
         function icone(tipo) {
             return L.divIcon({
@@ -383,6 +379,7 @@
             return c;
         }
 
+        // Usa a mesma chamada de contatos que o painel ja usa (api.criarContato)
         async function salvarContato(item, botao) {
             botao.disabled = true;
             botao.textContent = 'Salvando...';
@@ -391,6 +388,8 @@
                 await api.criarContato({ nome: item.nome.slice(0, 150), telefone: item.tel, tipo: 2 });
                 botao.textContent = 'Salvo ✓';
                 status('Contato "' + item.nome + '" salvo na sua Lista de Contatos.', 'ok');
+                // Atualiza a lista de contatos do painel sem recarregar a pagina
+                try { if (typeof carregarContatos === 'function') carregarContatos(); } catch (e) { /* so visual */ }
             } catch (e) {
                 botao.disabled = false;
                 botao.textContent = 'Salvar nos contatos';
@@ -535,17 +534,26 @@
 
         /* ----- raio e filtros ----- */
         $('selRaio').addEventListener('change', function () {
-            estado.raio = parseInt($('selRaio').value, 10);
+            var novo = parseInt($('selRaio').value, 10);
+            if (estado.plano.raios.indexOf(novo) < 0) { // raio de plano maior: volta para o permitido
+                $('selRaio').value = String(estado.raio);
+                return;
+            }
+            estado.raio = novo;
             if (estado.circulo) estado.circulo.setRadius(estado.raio * 1000);
             buscar();
         });
+        $('fltFarmacia').addEventListener('change', function () { $('fltFarmacia').dataset.tocado = '1'; });
         ['fltHospital', 'fltPosto', 'fltFarmacia', 'fltH24'].forEach(function (id) {
             $(id).addEventListener('change', desenhar);
         });
 
         /* ----- SOS (Cuidado+ e Cuidado Total) ----- */
         function abrirSOS() {
-            if (!estado.plano.sos) return;
+            if (!estado.plano.sos) {
+                status('O modo SOS faz parte do plano Cuidado+. Veja “Meu plano” para fazer o upgrade.', 'erro');
+                return;
+            }
             if (estado.lat === null) {
                 status('Para o modo SOS, primeiro use a sua localização ou busque um endereço.', 'erro');
                 return;
@@ -570,8 +578,13 @@
         $('btnFecharSOS').addEventListener('click', function () { $('painelSOS').hidden = true; });
 
         /* ----- aplicar o plano na tela ----- */
+        function textoAviso(origem) {
+            if (origem === 'padrao') return 'Sem plano contratado: usando os recursos do Essencial (grátis).';
+            return 'Plano lido da sua conta.';
+        }
+
         function aplicarPlano(chave, origem) {
-            var plano = PLANOS[chave];
+            var plano = PLANOS[chave] || PLANOS.essencial;
             estado.plano = plano;
             estado.origemPlano = origem;
 
@@ -580,11 +593,15 @@
             ul.textContent = '';
             plano.beneficios.forEach(function (b) { ul.appendChild(criar('li', '', b)); });
 
+            // Lista todos os raios; os de planos maiores aparecem travados
             var sel = $('selRaio');
             sel.textContent = '';
-            plano.raios.forEach(function (r) {
+            TODOS_RAIOS.forEach(function (r) {
+                var liberado = plano.raios.indexOf(r) >= 0;
                 var o = document.createElement('option');
-                o.value = String(r); o.textContent = r + ' km';
+                o.value = String(r);
+                o.textContent = r + ' km' + (liberado ? '' : ' 🔒 ' + PLANOS[planoMinimoDoRaio(r)].nome);
+                o.disabled = !liberado;
                 sel.appendChild(o);
             });
             estado.raio = plano.raios.indexOf(estado.raio) >= 0 ? estado.raio : plano.raioPadrao;
@@ -605,11 +622,8 @@
             if (!plano.sos) $('painelSOS').hidden = true;
 
             $('atalhoSuporte').hidden = !plano.suporte;
-            $('blocoSimular').hidden = (origem === 'api');
-            $('selSimularPlano').value = chave;
-            $('avisoPlano').textContent = origem === 'api'
-                ? 'Plano lido da sua conta.'
-                : (origem === 'padrao' ? 'Plano não identificado: usando o Essencial (todos os usuários têm o localizador).' : 'Plano deste navegador.');
+            $('linkUpgradeMapa').hidden = plano.chave === 'total';
+            $('avisoPlano').textContent = textoAviso(origem);
 
             if (estado.lat !== null) {
                 if (estado.circulo) estado.circulo.setRadius(estado.raio * 1000);
@@ -617,25 +631,34 @@
             }
         }
 
-        $('selSimularPlano').addEventListener('change', function () {
-            var k = $('selSimularPlano').value;
-            salvarPlanoSimulado(k);
-            aplicarPlano(k, 'simulacao');
-        });
+        // Confirma o plano na conta (mesma rota que o painel ja usa para o perfil)
+        function confirmarPlanoNaConta() {
+            if (typeof api === 'undefined' || typeof api.perfil !== 'function') return;
+            api.perfil().then(function (perfil) {
+                var k = planoDaApi(perfil) || 'essencial';
+                if (k !== estado.plano.chave) {
+                    aplicarPlano(k, 'api');
+                } else {
+                    estado.origemPlano = 'api';
+                    $('avisoPlano').textContent = textoAviso('api');
+                }
+            }).catch(function () { /* mantem o plano da sessao */ });
+        }
 
         /* ----- partida ----- */
         status('Toque em “Usar minha localização” ou busque um endereço.', '');
-        descobrirPlano().then(function (p) {
-            aplicarPlano(p.chave, p.origem);
-            // se o navegador ja tem permissao, localiza sozinho
-            try {
-                if (navigator.permissions && navigator.permissions.query) {
-                    navigator.permissions.query({ name: 'geolocation' }).then(function (r) {
-                        if (r.state === 'granted') usarMinhaLocalizacao();
-                    }, function () { /* sem Permissions API */ });
-                }
-            } catch (e) { /* ignora */ }
-        });
+        var inicial = planoDaSessao();
+        aplicarPlano(inicial || 'essencial', inicial ? 'sessao' : 'padrao');
+        confirmarPlanoNaConta();
+
+        // se o navegador ja tem permissao, localiza sozinho
+        try {
+            if (navigator.permissions && navigator.permissions.query) {
+                navigator.permissions.query({ name: 'geolocation' }).then(function (r) {
+                    if (r.state === 'granted') usarMinhaLocalizacao();
+                }, function () { /* sem Permissions API */ });
+            }
+        } catch (e) { /* ignora */ }
 
         // exposto para depuracao/testes
         raiz.MapaMedica = raiz.MapaMedica || {};
@@ -646,7 +669,9 @@
     var publico = {
         PLANOS: PLANOS,
         chaveDoNome: chaveDoNome,
+        chaveDoPlano: chaveDoPlano,
         planoDaApi: planoDaApi,
+        planoMinimoDoRaio: planoMinimoDoRaio,
         distanciaKm: distanciaKm,
         montarConsulta: montarConsulta,
         processarResposta: processarResposta,

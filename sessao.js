@@ -1,9 +1,3 @@
-/* 
-   sessao.js - login entre as paginas, checkout protegido e logo.
-   Carregar DEPOIS do script.js em index.html, logado.html e checkout.html:
-   <script src="sessao.js"></script>
-   Nao depende do api.js (le a sessao direto do localStorage).
-    */
 (function () {
     var CHAVE_TOKEN = 'medicaMaisToken';
     var CHAVE_EXPIRA = 'medicaMaisTokenExpira';
@@ -30,7 +24,7 @@
 
     /* ---------- LOGO: volta ao topo da pagina atual (home e painel) ---------- */
     var logo = document.querySelector('nav .nav-container img') || document.querySelector('nav img');
-    if (logo && !logo.closest('a')) {
+    if (logo) {
         var voltarAoTopo = function () {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
@@ -47,20 +41,20 @@
         });
     }
 
-    /* ---------- MENU: quem esta logado nao ve "Login", ve "Meu painel" ---------- */
-    var linkLogin = document.querySelector('#menuNav a[href="login.html"]');
-    if (linkLogin) {
+    /* ---------- HOME (index.html) ---------- */
+    if (document.getElementById('planos')) {
+        var linkLogin = document.querySelector('#menuNav a[href="login.html"]');
+
         if (sessaoAtiva()) {
-            linkLogin.setAttribute('href', 'logado.html');
-            linkLogin.textContent = 'Meu painel';
-        } else {
+            // Quem ja esta logado nao ve mais "Login": ve o caminho para o painel
+            if (linkLogin) {
+                linkLogin.setAttribute('href', 'logado.html');
+                linkLogin.textContent = 'Meu painel';
+            }
+        } else if (linkLogin) {
             // Entrar pelo menu nao deve herdar um destino de checkout abandonado
             linkLogin.addEventListener('click', limparDestino);
         }
-    }
-
-    /* ---------- HOME (index.html) ---------- */
-    if (document.getElementById('planos')) {
 
         // Na fase de captura: roda antes do clique de planos do script.js
         document.addEventListener('click', function (evento) {
@@ -103,30 +97,6 @@
         if (linkSucesso) {
             linkSucesso.setAttribute('href', 'logado.html');
             linkSucesso.textContent = 'Voltar para o painel';
-        }
-
-        // Quando a tela "Pagamento aprovado" aparece, guarda o plano escolhido neste navegador
-        // (usado pelo mapa de hospitais ate o back-end gravar o plano da conta).
-        var overlaySucesso = document.getElementById('overlay-sucesso');
-        if (overlaySucesso && typeof MutationObserver !== 'undefined') {
-            var nomePlano = new URLSearchParams(window.location.search).get('plano') || '';
-            var aparece = function (el) {
-                var c = el.classList;
-                return c.contains('ativo') || c.contains('aberto') || c.contains('mostrar') || c.contains('visivel') ||
-                    (el.style && el.style.display && el.style.display !== 'none');
-            };
-            new MutationObserver(function () {
-                if (!nomePlano || !aparece(overlaySucesso)) return;
-                try {
-                    var u = JSON.parse(localStorage.getItem('medicaMaisUsuarioLogado')) || {};
-                    localStorage.setItem('medicaMaisPlano', JSON.stringify({
-                        nome: nomePlano,
-                        origem: 'checkout',
-                        usuario: String(u.id !== undefined ? u.id : (u.email || '')),
-                        quando: new Date().toISOString()
-                    }));
-                } catch (e) { /* sem armazenamento */ }
-            }).observe(overlaySucesso, { attributes: true, attributeFilter: ['class', 'style'] });
         }
     }
 })();
