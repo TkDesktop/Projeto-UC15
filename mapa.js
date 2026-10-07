@@ -6,8 +6,7 @@
    Ordem dos scripts no logado.html:
    leaflet.js -> api.js -> script.js -> mapa.js
 
-   Nao usa sessao.js e nao grava nada no navegador alem do cache de buscas
-   (sessionStorage). O plano vem da propria conta (api.perfil / sessao do painel).
+   Nao usa sessao.js. Guarda so o cache das buscas (sessionStorage e localStorage). O plano vem da propria conta (api.perfil / sessao do painel).
 */
 (function (raiz) {
     'use strict';
@@ -17,12 +16,18 @@
        --------------------------------------------------------------- */
     var CHAVE_SESSAO_USUARIO = 'medicaMaisUsuarioLogado'; // mesma chave do script.js
     var CENTRO_PADRAO = { lat: -23.5505, lon: -46.6333 }; // Sao Paulo
+    // Servidores publicos do Overpass (espelhos). Todos sao consultados ao mesmo tempo:
+    // vale o primeiro que responder. Para mais folga, ponha o seu proprio no topo da lista.
     var ENDPOINTS = [
         'https://overpass-api.de/api/interpreter',
-        'https://overpass.private.coffee/api/interpreter'
+        'https://overpass.private.coffee/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter',
+        'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
     ];
-    var TTL_CACHE_MS = 10 * 60 * 1000;
-    var TIMEOUT_MS = 28000;
+    var TTL_CACHE_MS = 10 * 60 * 1000;          // cache da sessao (busca repetida e instantanea)
+    var TTL_RESERVA_MS = 7 * 24 * 60 * 60 * 1000; // ultima busca boa, usada se todos os servidores falharem
+    var TIMEOUT_MS = 20000;                      // por tentativa
+    var TENTATIVAS = 3;
     var URL_NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 
     var CATEGORIAS = {
@@ -135,7 +140,7 @@
         if (categorias.indexOf('farmacia') >= 0) {
             p.push('nwr["amenity"="pharmacy"]' + around + ';');
         }
-        return '[out:json][timeout:25];(' + p.join('') + ');out tags center 250;';
+        return '[out:json][timeout:18][maxsize:33554432];(' + p.join('') + ');out tags center 300;';
     }
 
     function classificar(tags) {
@@ -226,48 +231,82 @@
        REDE: Overpass com cache e servidor reserva
        (so servicos publicos do OpenStreetMap; nada do back-end da Medica+)
        --------------------------------------------------------------- */
-    function lerCache(chave) {
+    function lerCache(chave, ttl) {
         try {
-            var bruto = sessionStorage.getItem(chave);
+            var bruto = (ttl === TTL_RESERVA_MS ? localStorage : sessionStorage).getItem(chave);
             if (!bruto) return null;
             var obj = JSON.parse(bruto);
-            return (Date.now() - obj.t < TTL_CACHE_MS) ? obj.d : null;
+            return (Date.now() - obj.t < ttl) ? obj.d : null;
         } catch (e) { return null; }
     }
 
     function gravarCache(chave, dados) {
-        try { sessionStorage.setItem(chave, JSON.stringify({ t: Date.now(), d: dados })); } catch (e) { /* cheio */ }
+        var texto = JSON.stringify({ t: Date.now(), d: dados });
+        try { sessionStorage.setItem(chave, texto); } catch (e) { /* cheio */ }
+        try { localStorage.setItem('reserva:' + chave, texto); } catch (e) { /* cheio */ }
+    }
+
+    function esperar(ms) { return new Promise(function (ok) { setTimeout(ok, ms); }); }
+
+    // Pergunta a um servidor; cancelavel pelo controlador compartilhado
+    async function perguntar(url, consulta, ctrl) {
+        var resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            body: 'data=' + encodeURIComponent(consulta),
+            signal: ctrl.signal
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        var dados = await resp.json();
+        if (!dados || !Array.isArray(dados.elements)) throw new Error('Resposta inesperada');
+        return dados;
+    }
+
+    // Uma rodada: todos os servidores ao mesmo tempo, o primeiro que acertar ganha
+    function corrida(consulta) {
+        return new Promise(function (resolve, reject) {
+            var ctrl = new AbortController();
+            var falhas = 0, ultimo = null, acabou = false;
+            var timer = setTimeout(function () { ctrl.abort(); }, TIMEOUT_MS);
+            ENDPOINTS.forEach(function (url) {
+                perguntar(url, consulta, ctrl).then(function (dados) {
+                    if (acabou) return;
+                    acabou = true; clearTimeout(timer); ctrl.abort();
+                    resolve(dados);
+                }, function (e) {
+                    ultimo = e; falhas++;
+                    if (!acabou && falhas === ENDPOINTS.length) {
+                        acabou = true; clearTimeout(timer);
+                        reject(ultimo);
+                    }
+                });
+            });
+        });
     }
 
     async function buscarOverpass(lat, lon, raioKm, categorias) {
         var chave = 'mmHosp:' + lat.toFixed(3) + ':' + lon.toFixed(3) + ':' + raioKm + ':' + categorias.join(',');
-        var emCache = lerCache(chave);
+        var emCache = lerCache(chave, TTL_CACHE_MS);
         if (emCache) return emCache;
 
         var consulta = montarConsulta(lat, lon, raioKm, categorias);
         var ultimoErro = null;
-        for (var i = 0; i < ENDPOINTS.length; i++) {
-            var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-            var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, TIMEOUT_MS) : null;
+        for (var t = 0; t < TENTATIVAS; t++) {
             try {
-                var resp = await fetch(ENDPOINTS[i], {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-                    body: 'data=' + encodeURIComponent(consulta),
-                    signal: ctrl ? ctrl.signal : undefined
-                });
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                var dados = await resp.json();
-                if (!dados || !Array.isArray(dados.elements)) throw new Error('Resposta inesperada');
+                var dados = await corrida(consulta);
                 gravarCache(chave, dados);
                 return dados;
             } catch (e) {
                 ultimoErro = e;
-            } finally {
-                if (timer) clearTimeout(timer);
+                if (t < TENTATIVAS - 1) await esperar(1500 * (t + 1)); // espera um pouco antes de insistir
             }
         }
-        throw new Error('O serviço de mapas está ocupado agora. Tente de novo em instantes. (' + (ultimoErro && ultimoErro.message) + ')');
+
+        // Todos falharam: usa a ultima busca boa deste local, se existir
+        var reserva = lerCache('reserva:' + chave, TTL_RESERVA_MS);
+        if (reserva) { reserva._antigo = true; return reserva; }
+
+        throw new Error('Os servidores de mapa estão sobrecarregados. Tente de novo em instantes ou diminua o raio. (' + (ultimoErro && ultimoErro.message) + ')');
     }
 
     async function geocodificar(texto) {
@@ -454,13 +493,14 @@
         async function buscar() {
             if (estado.lat === null) return;
             var meu = ++estado.reqId;
-            status('Buscando hospitais e postos perto de você...', 'carregando');
+            status('Buscando hospitais e postos perto de você (pode levar alguns segundos)...', 'carregando');
             $('listaResultados').textContent = '';
             try {
                 var dados = await buscarOverpass(estado.lat, estado.lon, estado.raio, estado.plano.categorias);
                 if (meu !== estado.reqId) return; // chegou uma busca mais nova
                 estado.itens = processarResposta(dados, estado.lat, estado.lon);
                 desenhar();
+                if (dados._antigo) status('Servidor lento: mostrando a última busca salva deste local. Os dados podem estar desatualizados.', 'erro');
             } catch (e) {
                 if (meu !== estado.reqId) return;
                 estado.itens = [];
