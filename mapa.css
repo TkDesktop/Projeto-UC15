@@ -1,0 +1,208 @@
+
+.mm-pagina {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  color: #1f2937;
+}
+
+.mm-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.mm-topo h1 { margin: 0 0 6px; font-size: clamp(24px, 3vw, 34px); }
+.mm-topo p { margin: 0 0 6px; color: #4b5563; }
+.mm-emergencia-fixa { font-weight: 600; }
+.mm-emergencia-fixa a { color: #b3202d; text-decoration: none; }
+.mm-emergencia-fixa a:hover { text-decoration: underline; }
+
+.mm-nota { font-size: 13px; color: #6b7280; margin: 4px 0; }
+.mm-nota a { color: #2d7ff9; }
+.mm-dica { color: #6b7280; font-size: 12px; }
+
+/* ----- cartões ----- */
+.mm-plano, .mm-controles {
+  background: #fff;
+  border: 1px solid #e3e8f2;
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin: 16px 0;
+}
+
+.mm-plano-cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+.mm-plano h2 { margin: 0; font-size: 18px; }
+.mm-plano-nome {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: #e6f5e9;
+  color: #22752f;
+  font-weight: 700;
+}
+.mm-beneficios { margin: 10px 0 4px; padding-left: 20px; }
+.mm-beneficios li { margin: 3px 0; }
+
+.mm-simular {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px dashed #d0d7e6;
+  font-size: 14px;
+}
+.mm-simular[hidden] { display: none; }
+
+/* ----- controles ----- */
+.mm-linha-controles { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+.mm-form-endereco { display: flex; flex: 1 1 320px; gap: 8px; }
+.mm-form-endereco input {
+  flex: 1; min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #d0d7e6;
+  border-radius: 8px;
+  font-size: 15px;
+}
+.mm-pagina select {
+  padding: 9px 10px;
+  border: 1px solid #d0d7e6;
+  border-radius: 8px;
+  font-size: 15px;
+  background: #fff;
+}
+.mm-raio { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+
+.mm-filtros {
+  display: flex; flex-wrap: wrap; gap: 8px 18px;
+  margin: 14px 0 0; padding: 10px 14px;
+  border: 1px solid #e3e8f2; border-radius: 10px;
+}
+.mm-filtros legend { padding: 0 6px; font-size: 13px; color: #6b7280; }
+.mm-filtros label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.mm-filtros label:has(input:disabled) { opacity: .6; cursor: not-allowed; }
+
+/* ----- botões ----- */
+.mm-btn {
+  display: inline-block;
+  padding: 10px 16px;
+  border: 1.5px solid #c5cedd;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+}
+.mm-btn:hover { background: #f4f7fc; }
+.mm-btn:disabled { opacity: .6; cursor: not-allowed; }
+.mm-btn-prim { background: #2d7ff9; border-color: #2d7ff9; color: #fff; }
+.mm-btn-prim:hover { background: #1a6ae0; }
+.mm-btn-sos { background: #d62839; border-color: #d62839; color: #fff; }
+.mm-btn-sos:hover { background: #b3202d; }
+.mm-bloqueado { background: #e5e7eb; border-color: #d1d5db; color: #6b7280; cursor: not-allowed; }
+.mm-bloqueado:hover { background: #e5e7eb; }
+
+.mm-sos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 14px; }
+
+.mm-painel-sos {
+  position: relative;
+  margin-top: 14px;
+  padding: 16px;
+  background: #fde8ea;
+  border: 1px solid #f3b7bd;
+  border-radius: 12px;
+}
+.mm-painel-sos[hidden] { display: none; }
+.mm-fechar {
+  position: absolute; top: 8px; right: 10px;
+  border: 0; background: transparent; font-size: 18px; cursor: pointer; color: #6b7280;
+}
+.mm-ligacoes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.mm-sos-titulo { margin: 0 0 8px; font-weight: 700; }
+
+/* ----- status ----- */
+.mm-status { min-height: 20px; margin: 12px 0 0; font-size: 14px; color: #4b5563; }
+.mm-status.mm-ok { color: #22752f; }
+.mm-status.mm-erro { color: #b3202d; font-weight: 600; }
+.mm-status.mm-carregando { color: #2d7ff9; }
+
+/* ----- lista + mapa ----- */
+.mm-area {
+  display: grid;
+  grid-template-columns: minmax(300px, 420px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.mm-mapa {
+  height: 600px;
+  border: 1px solid #d0d7e6;
+  border-radius: 14px;
+  overflow: hidden;
+  z-index: 0;
+}
+.mm-lista {
+  list-style: none;
+  margin: 0; padding: 0;
+  max-height: 600px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.mm-vazio { padding: 16px; background: #f7f9fd; border-radius: 10px; color: #4b5563; }
+
+.mm-item {
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #e3e8f2;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.mm-item:hover { border-color: #2d7ff9; box-shadow: 0 2px 10px rgba(45, 127, 249, .15); }
+.mm-nome { display: block; margin-bottom: 6px; font-size: 16px; line-height: 1.3; }
+.mm-linha { margin: 4px 0; font-size: 13px; color: #4b5563; }
+
+.mm-selos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.mm-selo { padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #eef2f7; color: #374151; }
+.mm-selo-dist { background: #e3eeff; color: #1a56b8; }
+.mm-selo-24 { background: #e6f5e9; color: #22752f; }
+.mm-selo-urg { background: #fde8ea; color: #b3202d; }
+
+.mm-acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.mm-acoes .mm-btn { padding: 7px 12px; font-size: 13px; }
+
+.mm-popup { min-width: 220px; }
+.mm-popup .mm-nome { font-size: 15px; }
+
+/* ----- marcadores do mapa ----- */
+.mm-pin-wrap { background: transparent; border: 0; }
+.mm-pin {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .35);
+  font-size: 16px;
+}
+.mm-pin-hospital { background: #fde8ea; }
+.mm-pin-posto { background: #e3eeff; }
+.mm-pin-farmacia { background: #e6f5e9; }
+.mm-voce {
+  display: block;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #2d7ff9;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 6px rgba(45, 127, 249, .25);
+}
+
+.mm-creditos { margin-top: 20px; font-size: 12px; color: #6b7280; }
+.mm-creditos a { color: #2d7ff9; }
+
+@media (max-width: 860px) {
+  .mm-area { grid-template-columns: 1fr; }
+  .mm-mapa { height: 420px; order: -1; }
+  .mm-lista { max-height: none; }
+}
