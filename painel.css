@@ -232,3 +232,28 @@
     font-size: clamp(13px, 1.15vw, 19px);
   }
 }
+/* ===== Escalonamento de planos: recursos bloqueados ===== */
+.recurso-bloqueado { position: relative; min-height: 280px; overflow: hidden; }
+.recurso-bloqueado.compacto { min-height: 170px; }
+.recurso-bloqueado > *:not(.bloqueio-plano) {
+  filter: blur(6px) grayscale(.4); opacity: .45; pointer-events: none; user-select: none;
+}
+.bloqueio-plano {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  padding: 16px; text-align: center; background: rgba(255, 255, 255, .6); color: #0a1a3c;
+}
+.bloqueio-plano p { margin: 0; max-width: 380px; font-size: 14px; color: #4a5568; }
+.bloqueio-icone { font-size: 34px; line-height: 1; }
+.recurso-bloqueado.compacto .bloqueio-plano p { display: none; }
+.recurso-bloqueado.compacto .bloqueio-icone { font-size: 26px; }
+.recurso-bloqueado.compacto .btn-registrar { padding: 8px 14px; font-size: 13px; }
+#menuNav a[data-bloqueado] { opacity: .75; }
+
+/* ===== Meu plano: o que cada plano inclui ===== */
+.plano-nota { margin: 4px 0 0; font-size: 14px; color: #6b7890; }
+.plano-inclui { margin: 6px 0 0; font-size: 13px; color: #6b7890; }
+.plano-recursos {
+  list-style: none; margin: 4px 0 8px; padding: 0; width: 100%;
+  display: flex; flex-direction: column; gap: 5px; text-align: left; font-size: 14px; color: #1f2937;
+}

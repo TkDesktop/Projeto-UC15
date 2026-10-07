@@ -1836,17 +1836,41 @@ function atualizarBotoesVisita() {
     }
 }
 
+// Recursos de cada plano (os mesmos da página inicial). "nivel" = menor plano que inclui o recurso:
+// 0 = Essencial, 1 = Cuidado+, 2 = Cuidado Total. Cada plano inclui tudo do anterior.
+const RECURSOS_PLANOS = [
+    { nome: 'Lembrete Inteligente', nivel: 0 },
+    { nome: 'Localizador de Hospitais e Postos', nivel: 0 },
+    { nome: 'Lista de Contatos', nivel: 0 },
+    { nome: 'Botão SOS', nivel: 1 },
+    { nome: 'Monitoramento', nivel: 1 },
+    { nome: 'Suporte Prioritário', nivel: 2 },
+    { nome: 'Medidor Digital', nivel: 2 }
+];
+
 const PLANOS_INFO = [
     { nome: 'Essencial', preco: '0,00', periodo: '/mês' },
     { nome: 'Cuidado+', preco: '59,90', periodo: '/mês' },
     { nome: 'Cuidado Total', preco: '699,99', periodo: '/ano' }
 ];
 
+// Quem ainda não contratou nada usa o Essencial (grátis)
+function nivelDoPlano(plano) {
+    return (plano === null || plano === undefined) ? 0 : plano;
+}
+
+function linkDoPlano(nivel) {
+    const p = PLANOS_INFO[nivel];
+    return 'checkout.html?plano=' + encodeURIComponent(p.nome) + '&preco=' + encodeURIComponent(p.preco);
+}
+
 function renderizarPlanos(planoAtual) {
     const grade = document.getElementById('planosOpcoes');
     if (!grade) return;
     const temPlano = planoAtual !== null && planoAtual !== undefined;
     document.getElementById('planoAtualNome').textContent = temPlano ? (PLANOS_NOME[planoAtual] || 'Plano ativo') : 'Nenhum plano contratado';
+    const nota = document.getElementById('planoAtualNota');
+    if (nota) nota.textContent = temPlano ? '' : 'Sem plano contratado, você usa os recursos do Essencial (grátis).';
     grade.innerHTML = '';
     PLANOS_INFO.forEach((p, i) => {
         const eAtual = temPlano && planoAtual === i;
@@ -1855,6 +1879,13 @@ function renderizarPlanos(planoAtual) {
         const preco = criarItem('p', 'plano-preco', 'R$ ' + p.preco);
         preco.appendChild(criarItem('small', '', ' ' + p.periodo));
         card.appendChild(preco);
+
+        // Só o que este plano acrescenta em relação ao anterior
+        card.appendChild(criarItem('p', 'plano-inclui', i === 0 ? 'Inclui:' : 'Tudo do ' + PLANOS_INFO[i - 1].nome + ', mais:'));
+        const lista = criarItem('ul', 'plano-recursos');
+        RECURSOS_PLANOS.filter(r => r.nivel === i).forEach(r => lista.appendChild(criarItem('li', '', '✔ ' + r.nome)));
+        card.appendChild(lista);
+
         if (eAtual) {
             card.appendChild(criarItem('span', 'plano-selo', 'Seu plano atual'));
             const botao = criarItem('button', 'btn-registrar', 'Plano atual');
@@ -1863,10 +1894,86 @@ function renderizarPlanos(planoAtual) {
             card.appendChild(botao);
         } else {
             const link = criarItem('a', 'btn-registrar btn-link', temPlano ? 'Trocar para este plano' : 'Assinar este plano');
-            link.href = 'checkout.html?plano=' + encodeURIComponent(p.nome) + '&preco=' + encodeURIComponent(p.preco);
+            link.href = linkDoPlano(i);
             card.appendChild(link);
         }
         grade.appendChild(card);
+    });
+}
+
+/*  BLOQUEIO DE RECURSOS POR PLANO */
+// Quais partes do painel pertencem a qual recurso. Contatos é do Essencial, então nunca é bloqueado.
+const BLOQUEIOS_PAINEL = [
+    { seletor: '.card-picos', recurso: 'Monitoramento' },
+    { seletor: '.card-suporte', recurso: 'Suporte Prioritário' },
+    { seletor: '#monitoramento', recurso: 'Monitoramento' },
+    { seletor: '#humor', recurso: 'Monitoramento' },
+    { seletor: '#suporte', recurso: 'Suporte Prioritário' }
+];
+const LINKS_MENU_BLOQUEAVEIS = { '#monitoramento': 'Monitoramento', '#humor': 'Monitoramento', '#suporte': 'Suporte Prioritário' };
+
+function nivelDoRecurso(nome) {
+    const recurso = RECURSOS_PLANOS.find(r => r.nome === nome);
+    return recurso ? recurso.nivel : 0;
+}
+
+function desbloquearRecursos() {
+    document.querySelectorAll('.recurso-bloqueado').forEach(el => {
+        el.classList.remove('recurso-bloqueado', 'compacto');
+        Array.from(el.children).forEach(filho => {
+            if (filho.classList.contains('bloqueio-plano')) {
+                filho.remove();
+            } else {
+                filho.removeAttribute('inert');
+                filho.removeAttribute('aria-hidden');
+            }
+        });
+    });
+    document.querySelectorAll('#menuNav a[data-bloqueado]').forEach(a => {
+        a.textContent = a.dataset.rotulo;
+        a.removeAttribute('data-bloqueado');
+        a.removeAttribute('title');
+    });
+}
+
+// Pode ser chamada várias vezes: sempre limpa os bloqueios antes de aplicar de novo.
+function aplicarPlanoNoPainel(nivel) {
+    desbloquearRecursos();
+
+    BLOQUEIOS_PAINEL.forEach(b => {
+        const nivelNecessario = nivelDoRecurso(b.recurso);
+        const alvo = document.querySelector(b.seletor);
+        if (!alvo || nivelNecessario <= nivel) return;
+
+        const plano = PLANOS_INFO[nivelNecessario];
+        alvo.classList.add('recurso-bloqueado');
+        if (alvo.tagName === 'ARTICLE') alvo.classList.add('compacto');
+        // inert: ninguém consegue clicar nem navegar por teclado nas partes bloqueadas
+        Array.from(alvo.children).forEach(filho => {
+            filho.setAttribute('inert', '');
+            filho.setAttribute('aria-hidden', 'true');
+        });
+
+        const aviso = criarItem('div', 'bloqueio-plano');
+        aviso.append(
+            criarItem('span', 'bloqueio-icone', '🔒'),
+            criarItem('strong', '', 'Recurso do plano ' + plano.nome),
+            criarItem('p', '', b.recurso + ' está disponível a partir do plano ' + plano.nome + '.')
+        );
+        const link = criarItem('a', 'btn-registrar btn-link', 'Fazer upgrade para ' + plano.nome);
+        link.href = linkDoPlano(nivelNecessario);
+        aviso.appendChild(link);
+        alvo.appendChild(aviso);
+    });
+
+    Object.keys(LINKS_MENU_BLOQUEAVEIS).forEach(href => {
+        const nivelNecessario = nivelDoRecurso(LINKS_MENU_BLOQUEAVEIS[href]);
+        const a = document.querySelector('#menuNav a[href="' + href + '"]');
+        if (!a || nivelNecessario <= nivel) return;
+        a.dataset.rotulo = a.textContent;
+        a.dataset.bloqueado = 'true';
+        a.textContent = '🔒 ' + a.dataset.rotulo;
+        a.title = 'Disponível a partir do plano ' + PLANOS_INFO[nivelNecessario].nome;
     });
 }
 
@@ -1881,6 +1988,7 @@ async function carregarPlano() {
         plano = lerSessaoUsuario().plano;
     }
     renderizarPlanos(plano);
+    aplicarPlanoNoPainel(nivelDoPlano(plano));
 }
 
 
@@ -1888,6 +1996,8 @@ async function carregarPlano() {
 document.addEventListener('DOMContentLoaded', async () => {
     if (!document.getElementById('saudacaoNome')) return;
     if (!exigirLogin()) return;
+
+    aplicarPlanoNoPainel(nivelDoPlano(lerSessaoUsuario().plano));
 
     atualizarSaudacao();
     iniciarMenuMobile();
