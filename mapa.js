@@ -389,51 +389,205 @@
         }
         return buscarOverpass(lat, lon, raioKm, categorias);
     }
+    /* ---------------------------------------------------------------
+       GEOCODIFICACAO (CEP e enderecos)
+       CEP -> endereco (ViaCEP, BrasilAPI, AwesomeAPI) -> coordenadas
+       (Nominatim, TomTom, coordenadas da AwesomeAPI), sempre conferindo a cidade.
+       --------------------------------------------------------------- */
+    var UF_NOMES = {
+        AC: 'Acre', AL: 'Alagoas', AP: 'Amapá', AM: 'Amazonas', BA: 'Bahia', CE: 'Ceará',
+        DF: 'Distrito Federal', ES: 'Espírito Santo', GO: 'Goiás', MA: 'Maranhão',
+        MT: 'Mato Grosso', MS: 'Mato Grosso do Sul', MG: 'Minas Gerais', PA: 'Pará',
+        PB: 'Paraíba', PR: 'Paraná', PE: 'Pernambuco', PI: 'Piauí', RJ: 'Rio de Janeiro',
+        RN: 'Rio Grande do Norte', RS: 'Rio Grande do Sul', RO: 'Rondônia', RR: 'Roraima',
+        SC: 'Santa Catarina', SP: 'São Paulo', SE: 'Sergipe', TO: 'Tocantins'
+    };
+    var ultimaNominatim = 0;
+
+    async function tentar(fn) {
+        try { return await fn(); } catch (e) { return null; }
+    }
+
+    function ehCoordenada(c) {
+        return !!c && typeof c.lat === 'number' && typeof c.lon === 'number' &&
+            !isNaN(c.lat) && !isNaN(c.lon) &&
+            c.lat > -34 && c.lat < 6 && c.lon > -74 && c.lon < -34; // dentro do Brasil
+    }
+
+    // Tira "(lado par)", "- de 100 a 200" etc. que atrapalham a busca
+    function limparRua(rua) {
+        return String(rua || '').replace(/\(.*?\)/g, '').split(' - ')[0].replace(/\s+/g, ' ').trim();
+    }
+
+    async function buscarJson(url, ms) {
+        var ctrl = new AbortController();
+        var timer = setTimeout(function () { ctrl.abort(); }, ms || 8000);
+        try {
+            var resp = await fetch(url, { signal: ctrl.signal, headers: { 'Accept': 'application/json' } });
+            var dados = null;
+            try { dados = await resp.json(); } catch (e) { dados = null; }
+            return { ok: resp.ok, status: resp.status, dados: dados };
+        } finally { clearTimeout(timer); }
+    }
+
+    // Nominatim: respeita 1 busca por segundo
+    async function nominatimBusca(params) {
+        var espera = 1100 - (Date.now() - ultimaNominatim);
+        if (espera > 0) await esperar(espera);
+        ultimaNominatim = Date.now();
+        var qs = 'format=jsonv2&limit=5&countrycodes=br&accept-language=pt-BR';
+        Object.keys(params).forEach(function (k) { qs += '&' + k + '=' + encodeURIComponent(params[k]); });
+        var r = await buscarJson(URL_NOMINATIM + '?' + qs, 10000);
+        if (!r.ok) throw new Error('A busca de endereço falhou (HTTP ' + r.status + ').');
+        return Array.isArray(r.dados) ? r.dados : [];
+    }
+
+    async function tomtomGeocode(consulta, cidade) {
+        if (!TOMTOM_KEY) return null;
+        var url = 'https://api.tomtom.com/search/2/geocode/' + encodeURIComponent(consulta) +
+            '.json?key=' + encodeURIComponent(TOMTOM_KEY) + '&countrySet=BR&language=pt-BR&limit=5';
+        var r = await buscarJson(url, TOMTOM_TIMEOUT_MS);
+        if (!r.ok || !r.dados) return null;
+        var cidadeN = semAcento(cidade).toLowerCase();
+        var lista = r.dados.results || [];
+        for (var i = 0; i < lista.length; i++) {
+            var a = lista[i].address || {};
+            var texto = semAcento((a.freeformAddress || '') + ' ' + (a.municipality || '')).toLowerCase();
+            var c = { lat: lista[i].position && lista[i].position.lat, lon: lista[i].position && lista[i].position.lon };
+            if (ehCoordenada(c) && (!cidadeN || texto.indexOf(cidadeN) >= 0)) return c;
+        }
+        return null;
+    }
+
+    async function coordenadasAwesome(cep) {
+        var r = await buscarJson('https://cep.awesomeapi.com.br/json/' + cep);
+        if (!r.ok || !r.dados) return null;
+        var c = { lat: parseFloat(r.dados.lat), lon: parseFloat(r.dados.lng) };
+        return ehCoordenada(c) ? c : null;
+    }
+
+    // CEP -> endereco. Tenta 3 servicos; so diz "nao encontrado" se um deles confirmar isso.
+    async function consultarCep(cep) {
+        var naoAchou = 0;
+        var fontes = [
+            async function () {
+                var r = await buscarJson('https://viacep.com.br/ws/' + cep + '/json/');
+                if (r.ok && r.dados && !r.dados.erro && r.dados.localidade) {
+                    return { rua: r.dados.logradouro, bairro: r.dados.bairro, cidade: r.dados.localidade, uf: r.dados.uf };
+                }
+                if ((r.ok && r.dados && r.dados.erro) || r.status === 400 || r.status === 404) return 'nao-achou';
+                throw new Error('HTTP ' + r.status);
+            },
+            async function () {
+                var r = await buscarJson('https://brasilapi.com.br/api/cep/v1/' + cep);
+                if (r.ok && r.dados && r.dados.city) {
+                    return { rua: r.dados.street, bairro: r.dados.neighborhood, cidade: r.dados.city, uf: r.dados.state };
+                }
+                if (r.status === 400 || r.status === 404) return 'nao-achou';
+                throw new Error('HTTP ' + r.status);
+            },
+            async function () {
+                var r = await buscarJson('https://cep.awesomeapi.com.br/json/' + cep);
+                if (r.ok && r.dados && r.dados.city) {
+                    var c = { lat: parseFloat(r.dados.lat), lon: parseFloat(r.dados.lng) };
+                    var end = { rua: r.dados.address, bairro: r.dados.district, cidade: r.dados.city, uf: r.dados.state };
+                    if (ehCoordenada(c)) { end.lat = c.lat; end.lon = c.lon; }
+                    return end;
+                }
+                if (r.status === 400 || r.status === 404) return 'nao-achou';
+                throw new Error('HTTP ' + r.status);
+            }
+        ];
+
+        for (var i = 0; i < fontes.length; i++) {
+            try {
+                var res = await fontes[i]();
+                if (res === 'nao-achou') { naoAchou++; }
+                else if (res && res.cidade) { res.cep = cep; return res; }
+            } catch (e) { /* tenta a proxima fonte */ }
+        }
+        if (naoAchou > 0) throw new Error('CEP não encontrado. Verifique se digitou corretamente.');
+        throw new Error('Não foi possível consultar o CEP agora. Verifique a conexão e tente de novo.');
+    }
+
+    // Endereco -> coordenadas, do mais preciso para o mais generico
+    async function localizarEndereco(end) {
+        var estado = UF_NOMES[String(end.uf || '').toUpperCase()] || end.uf || '';
+        var rua = limparRua(end.rua);
+        var bairro = String(end.bairro || '').trim();
+        var cidadeN = semAcento(end.cidade).toLowerCase();
+        var cepFmt = end.cep.slice(0, 5) + '-' + end.cep.slice(5);
+        var rotulo = [rua, bairro, end.cidade + ' - ' + end.uf].filter(Boolean).join(', ') + ' (CEP ' + cepFmt + ')';
+
+        function daCidade(item) {
+            return semAcento(item.display_name || '').toLowerCase().indexOf(cidadeN) >= 0;
+        }
+        function primeiroDaCidade(lista) {
+            for (var i = 0; i < lista.length; i++) {
+                if (daCidade(lista[i])) return { lat: parseFloat(lista[i].lat), lon: parseFloat(lista[i].lon) };
+            }
+            return null;
+        }
+        function pronto(c, aproximado) {
+            return { lat: c.lat, lon: c.lon, rotulo: rotulo + (aproximado ? ' — localização aproximada' : '') };
+        }
+        var p;
+
+        // 1) Rua + cidade + estado (busca estruturada do Nominatim)
+        if (rua) {
+            p = await tentar(async function () {
+                return primeiroDaCidade(await nominatimBusca({ street: rua, city: end.cidade, state: estado, country: 'Brasil' }));
+            });
+            if (ehCoordenada(p)) return pronto(p, false);
+
+            // 2) TomTom (ja usado nesse arquivo), conferindo a cidade
+            p = await tentar(function () { return tomtomGeocode(rua + ', ' + end.cidade + ', ' + end.uf, end.cidade); });
+            if (ehCoordenada(p)) return pronto(p, false);
+        }
+
+        // 3) Coordenadas que o proprio servico de CEP informou
+        p = ehCoordenada({ lat: end.lat, lon: end.lon }) ? { lat: end.lat, lon: end.lon } : await tentar(function () { return coordenadasAwesome(end.cep); });
+        if (ehCoordenada(p)) return pronto(p, !rua);
+
+        // 4) Bairro + cidade
+        if (bairro) {
+            p = await tentar(async function () {
+                return primeiroDaCidade(await nominatimBusca({ q: bairro + ', ' + end.cidade + ', ' + estado + ', Brasil' }));
+            });
+            if (ehCoordenada(p)) return pronto(p, true);
+        }
+
+        // 5) So a cidade (CEP unico de cidade pequena)
+        p = await tentar(async function () {
+            return primeiroDaCidade(await nominatimBusca({ city: end.cidade, state: estado, country: 'Brasil' }));
+        });
+        if (ehCoordenada(p)) return pronto(p, true);
+
+        return null;
+    }
+
+    async function geocodificarComNominatim(texto) {
+        var lista = await nominatimBusca({ q: texto });
+        if (!lista.length) return null;
+        return { lat: parseFloat(lista[0].lat), lon: parseFloat(lista[0].lon), rotulo: lista[0].display_name };
+    }
 
     async function geocodificar(texto) {
-    // Detectar se é CEP (8 dígitos, com ou sem formatação)
-    const cepLimpo = texto.replace(/\D/g, '');
-    
-    if (/^\d{8}$/.test(cepLimpo)) {
-        // Usar ViaCEP para CEPs brasileiros
-        try {
-            const resp = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-            const dados = await resp.json();
-            
-            if (dados.erro) throw new Error('CEP não encontrado.');
-            
-            // Montar endereço completo e geocodificar com Nominatim
-            const endereco = [
-                dados.logradouro,
-                dados.bairro,
-                dados.localidade,
-                dados.uf
-            ].filter(Boolean).join(', ');
-            
-            const resultado = await geocodificarComNominatim(endereco);
-            return {
-                lat: resultado.lat,
-                lon: resultado.lon,
-                rotulo: `${endereco} (CEP: ${dados.cep})`
-            };
-        } catch (e) {
-            throw new Error('CEP não encontrado. Verifique se digitou corretamente.');
+        // CEP: 8 digitos, com ou sem hifen / "CEP:" na frente
+        var m = /^\s*(?:cep\s*[:\-]?\s*)?(\d{5})\s*-?\s*(\d{3})\s*$/i.exec(texto);
+        if (m) {
+            var end = await consultarCep(m[1] + m[2]); // lanca erro claro se nao achar / sem rede
+            var pos = await localizarEndereco(end);
+            if (!pos) throw new Error('Encontramos o CEP, mas não conseguimos localizá-lo no mapa. Tente digitar o bairro ou o endereço.');
+            return pos;
         }
-    }
-    
-    // Se não for CEP, usar Nominatim direto
-    return await geocodificarComNominatim(texto);
-}
 
-// Renomear a função original
-async function geocodificarComNominatim(texto) {
-    var url = URL_NOMINATIM + '?format=jsonv2&limit=1&countrycodes=br&accept-language=pt-BR&q=' + encodeURIComponent(texto);
-    var resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-    if (!resp.ok) throw new Error('A busca de endereço falhou (HTTP ' + resp.status + ').');
-    var lista = await resp.json();
-    if (!lista.length) return null;
-    return { lat: parseFloat(lista[0].lat), lon: parseFloat(lista[0].lon), rotulo: lista[0].display_name };
-}
+        // Endereco ou bairro digitado
+        var achado = await tentar(function () { return geocodificarComNominatim(texto); });
+        if (achado) return achado;
+        var tt = await tentar(function () { return tomtomGeocode(texto, ''); });
+        return tt ? { lat: tt.lat, lon: tt.lon, rotulo: texto } : null;
+    }
 
     /* ---------------------------------------------------------------
        PLANO DO USUARIO (vem da conta, igual ao resto do painel)
