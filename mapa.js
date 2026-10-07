@@ -17,8 +17,7 @@
     var CHAVE_SESSAO_USUARIO = 'medicaMaisUsuarioLogado'; // mesma chave do script.js
     var CENTRO_PADRAO = { lat: -23.5505, lon: -46.6333 }; // Sao Paulo
     // Servidor publico do Overpass (so como reserva da TomTom).
-    // Os espelhos kumi.systems, private.coffee e maps.mail.ru foram removidos: devolviam
-    // erro 500/CORS no navegador. Se tiver um Overpass proprio, coloque-o aqui.
+ 
     var ENDPOINTS = [
         'https://overpass-api.de/api/interpreter'
     ];
@@ -26,9 +25,9 @@
     var TTL_RESERVA_MS = 7 * 24 * 60 * 60 * 1000; // ultima busca boa, usada se todos os servidores falharem
     var TIMEOUT_MS = 20000;                      // por tentativa
     var TENTATIVAS = 2;
-    // ---- TomTom (base propria de POIs, bem melhor que o OpenStreetMap no Brasil) ----
+
     // Cadastro gratis, sem cartao: https://developer.tomtom.com  (2.500 consultas/dia).
-    // Cole a sua chave abaixo. Se ficar vazio, o mapa usa so o OpenStreetMap (Overpass).
+    
     var TOMTOM_KEY = 't1TImMhjkiysj2G1Y4oQJHuQ8k9R3UYq';
     var TOMTOM_TIMEOUT_MS = 12000;
     var CAT_TOMTOM_SAUDE = '7321';    // Hospital/Polyclinic
