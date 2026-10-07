@@ -28,6 +28,15 @@
     var TTL_RESERVA_MS = 7 * 24 * 60 * 60 * 1000; // ultima busca boa, usada se todos os servidores falharem
     var TIMEOUT_MS = 20000;                      // por tentativa
     var TENTATIVAS = 3;
+    // ---- TomTom (base propria de POIs, bem melhor que o OpenStreetMap no Brasil) ----
+    // Cadastro gratis, sem cartao: https://developer.tomtom.com  (2.500 consultas/dia).
+    // Cole a sua chave abaixo. Se ficar vazio, o mapa usa so o OpenStreetMap (Overpass).
+    var TOMTOM_KEY = '';
+    var TOMTOM_TIMEOUT_MS = 12000;
+    var CAT_TOMTOM_SAUDE = '7321';    // Hospital/Polyclinic
+    var CAT_TOMTOM_FARMACIA = '7326'; // Pharmacy
+    var REGEX_POSTO = /\b(UBS|UPA|AMA|CAPS|CRAS)\b|posto|unidade b[aá]sica|cl[ií]nica|ambulat|policl[ií]nica|pronto[ -]?atend|centro de sa[uú]de|consult[oó]rio|laborat/i;
+
     var URL_NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 
     var CATEGORIAS = {
@@ -150,6 +159,7 @@
     }
 
     function enderecoDe(t) {
+        if (t._endereco) return t._endereco;
         var rua = t['addr:street'] ? t['addr:street'] + (t['addr:housenumber'] ? ', ' + t['addr:housenumber'] : '') : '';
         return [rua, t['addr:suburb'] || t['addr:neighbourhood'] || '', t['addr:city'] || '']
             .filter(Boolean).join(' · ');
@@ -307,6 +317,80 @@
         if (reserva) { reserva._antigo = true; return reserva; }
 
         throw new Error('Os servidores de mapa estão sobrecarregados. Tente de novo em instantes ou diminua o raio. (' + (ultimoErro && ultimoErro.message) + ')');
+    }
+
+    /* ---------------------------------------------------------------
+       TOMTOM: converte a resposta para o mesmo formato do Overpass,
+       assim o resto do mapa (filtros, SOS, cartoes) nao muda.
+       --------------------------------------------------------------- */
+    function horarioTomTom(oh) {
+        var rs = oh && oh.timeRanges;
+        if (!rs || !rs.length) return '';
+        function hm(t) { return (t.hour < 10 ? '0' : '') + t.hour + ':' + (t.minute < 10 ? '0' : '') + t.minute; }
+        var todos24 = rs.length >= 7 && rs.every(function (r) {
+            return r.startTime.hour === 0 && r.startTime.minute === 0 && r.endTime.hour === 23 && r.endTime.minute >= 59;
+        });
+        if (todos24) return '24/7';
+        return 'Horário: ' + hm(rs[0].startTime) + '–' + hm(rs[0].endTime);
+    }
+
+    function converterTomTom(r, grupo) {
+        var poi = r.poi || {};
+        var nome = poi.name || '';
+        var amenity = 'hospital';
+        if (grupo === 'farmacia') amenity = 'pharmacy';
+        else if (REGEX_POSTO.test(nome) && !/hospital/i.test(nome)) amenity = 'clinic';
+        var site = poi.url ? (/^https?:\/\//i.test(poi.url) ? poi.url : 'https://' + poi.url) : '';
+        return {
+            type: 'tt', id: r.id,
+            lat: r.position && r.position.lat, lon: r.position && r.position.lon,
+            tags: {
+                name: nome, amenity: amenity, phone: poi.phone || '', website: site,
+                opening_hours: horarioTomTom(poi.openingHours),
+                _endereco: (r.address && r.address.freeformAddress) || ''
+            }
+        };
+    }
+
+    async function consultarTomTom(lat, lon, raioKm, categoria, grupo) {
+        var url = 'https://api.tomtom.com/search/2/nearbySearch/.json?key=' + encodeURIComponent(TOMTOM_KEY) +
+            '&lat=' + lat.toFixed(5) + '&lon=' + lon.toFixed(5) + '&radius=' + Math.round(raioKm * 1000) +
+            '&limit=100&countrySet=BR&language=pt-BR&openingHours=nextSevenDays&categorySet=' + categoria;
+        var ctrl = new AbortController();
+        var timer = setTimeout(function () { ctrl.abort(); }, TOMTOM_TIMEOUT_MS);
+        try {
+            var resp = await fetch(url, { signal: ctrl.signal });
+            if (!resp.ok) throw new Error('TomTom HTTP ' + resp.status);
+            var json = await resp.json();
+            return (json.results || []).map(function (r) { return converterTomTom(r, grupo); });
+        } finally { clearTimeout(timer); }
+    }
+
+    async function buscarTomTom(lat, lon, raioKm, categorias) {
+        var chave = 'mmTT:' + lat.toFixed(3) + ':' + lon.toFixed(3) + ':' + raioKm + ':' + categorias.join(',');
+        var emCache = lerCache(chave, TTL_CACHE_MS);
+        if (emCache) return emCache;
+
+        var pedidos = [];
+        if (categorias.indexOf('hospital') >= 0 || categorias.indexOf('posto') >= 0) {
+            pedidos.push(consultarTomTom(lat, lon, raioKm, CAT_TOMTOM_SAUDE, 'saude'));
+        }
+        if (categorias.indexOf('farmacia') >= 0) {
+            pedidos.push(consultarTomTom(lat, lon, raioKm, CAT_TOMTOM_FARMACIA, 'farmacia'));
+        }
+        var listas = await Promise.all(pedidos);
+        var dados = { elements: [].concat.apply([], listas), _fonte: 'tomtom' };
+        gravarCache(chave, dados);
+        return dados;
+    }
+
+    // TomTom primeiro; se falhar (sem chave, cota do dia, rede), cai para o OpenStreetMap
+    async function buscarLugares(lat, lon, raioKm, categorias) {
+        if (TOMTOM_KEY) {
+            try { return await buscarTomTom(lat, lon, raioKm, categorias); }
+            catch (e) { if (raiz.console) console.warn('TomTom indisponivel, usando OpenStreetMap:', e.message); }
+        }
+        return buscarOverpass(lat, lon, raioKm, categorias);
     }
 
     async function geocodificar(texto) {
@@ -496,7 +580,7 @@
             status('Buscando hospitais e postos perto de você (pode levar alguns segundos)...', 'carregando');
             $('listaResultados').textContent = '';
             try {
-                var dados = await buscarOverpass(estado.lat, estado.lon, estado.raio, estado.plano.categorias);
+                var dados = await buscarLugares(estado.lat, estado.lon, estado.raio, estado.plano.categorias);
                 if (meu !== estado.reqId) return; // chegou uma busca mais nova
                 estado.itens = processarResposta(dados, estado.lat, estado.lon);
                 desenhar();
@@ -708,12 +792,16 @@
 
     var publico = {
         PLANOS: PLANOS,
+        converterTomTom: converterTomTom,
+        horarioTomTom: horarioTomTom,
         chaveDoNome: chaveDoNome,
         chaveDoPlano: chaveDoPlano,
         planoDaApi: planoDaApi,
         planoMinimoDoRaio: planoMinimoDoRaio,
         distanciaKm: distanciaKm,
         montarConsulta: montarConsulta,
+        converterTomTom: converterTomTom,
+        horarioTomTom: horarioTomTom,
         processarResposta: processarResposta,
         filtrarItens: filtrarItens,
         escolherHospitalSOS: escolherHospitalSOS,
