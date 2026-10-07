@@ -391,13 +391,49 @@
     }
 
     async function geocodificar(texto) {
-        var url = URL_NOMINATIM + '?format=jsonv2&limit=1&countrycodes=br&accept-language=pt-BR&q=' + encodeURIComponent(texto);
-        var resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if (!resp.ok) throw new Error('A busca de endereço falhou (HTTP ' + resp.status + ').');
-        var lista = await resp.json();
-        if (!lista.length) return null;
-        return { lat: parseFloat(lista[0].lat), lon: parseFloat(lista[0].lon), rotulo: lista[0].display_name };
+    // Detectar se é CEP (8 dígitos, com ou sem formatação)
+    const cepLimpo = texto.replace(/\D/g, '');
+    
+    if (/^\d{8}$/.test(cepLimpo)) {
+        // Usar ViaCEP para CEPs brasileiros
+        try {
+            const resp = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+            const dados = await resp.json();
+            
+            if (dados.erro) throw new Error('CEP não encontrado.');
+            
+            // Montar endereço completo e geocodificar com Nominatim
+            const endereco = [
+                dados.logradouro,
+                dados.bairro,
+                dados.localidade,
+                dados.uf
+            ].filter(Boolean).join(', ');
+            
+            const resultado = await geocodificarComNominatim(endereco);
+            return {
+                lat: resultado.lat,
+                lon: resultado.lon,
+                rotulo: `${endereco} (CEP: ${dados.cep})`
+            };
+        } catch (e) {
+            throw new Error('CEP não encontrado. Verifique se digitou corretamente.');
+        }
     }
+    
+    // Se não for CEP, usar Nominatim direto
+    return await geocodificarComNominatim(texto);
+}
+
+// Renomear a função original
+async function geocodificarComNominatim(texto) {
+    var url = URL_NOMINATIM + '?format=jsonv2&limit=1&countrycodes=br&accept-language=pt-BR&q=' + encodeURIComponent(texto);
+    var resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!resp.ok) throw new Error('A busca de endereço falhou (HTTP ' + resp.status + ').');
+    var lista = await resp.json();
+    if (!lista.length) return null;
+    return { lat: parseFloat(lista[0].lat), lon: parseFloat(lista[0].lon), rotulo: lista[0].display_name };
+}
 
     /* ---------------------------------------------------------------
        PLANO DO USUARIO (vem da conta, igual ao resto do painel)
@@ -818,4 +854,6 @@
             partir();
         }
     }
+
+    
 })(typeof window !== 'undefined' ? window : this);
