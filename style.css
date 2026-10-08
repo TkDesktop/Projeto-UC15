@@ -3180,3 +3180,423 @@ body.pagina-logado .footer-links ul {
     flex: 1;
     text-align: left;
 }
+
+
+:root {
+  /* ---- Cores da marca ---- */
+  --mm-cor-primaria: #2d7ff9;
+  --mm-cor-primaria-hover: #1a6ae0;
+  --mm-cor-primaria-clara: #dceeff;
+  --mm-cor-info-clara: #e3eeff;
+  --mm-cor-info-escura: #1a56b8;
+
+  --mm-cor-sucesso: #2e9e3f;
+  --mm-cor-sucesso-escura: #22752f;
+  --mm-cor-sucesso-clara: #e6f5e9;
+
+  --mm-cor-perigo: #d62839;
+  --mm-cor-perigo-escura: #b3202d;
+  --mm-cor-perigo-clara: #fde8ea;
+
+  /* ---- Texto e superfícies ---- */
+  --mm-texto: #1f2937;
+  --mm-texto-medio: #4b5563;
+  --mm-texto-suave: #6b7280;
+  --mm-superficie: #ffffff;
+  --mm-superficie-2: #f7f9fd;
+  --mm-borda: #e3e8f2;
+  --mm-borda-media: #d0d7e6;
+  --mm-borda-forte: #c5cedd;
+
+  /* ---- Espaçamento ---- */
+  --mm-espaco-1: 4px;
+  --mm-espaco-2: 8px;
+  --mm-espaco-3: 12px;
+  --mm-espaco-4: 16px;
+  --mm-espaco-5: 24px;
+  --mm-espaco-6: 32px;
+
+  /* ---- Cantos e sombras ---- */
+  --mm-raio-sm: 8px;
+  --mm-raio-md: 12px;
+  --mm-raio-lg: 16px;
+  --mm-raio-pill: 999px;
+  --mm-sombra-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --mm-sombra-md: 0 4px 14px rgba(15, 23, 42, 0.10);
+  --mm-sombra-lg: 0 18px 48px rgba(15, 23, 42, 0.22);
+
+  /* ---- Movimento e foco ---- */
+  --mm-transicao: 160ms ease;
+  --mm-foco: rgba(45, 127, 249, 0.45);
+
+  /* ---- Navegação (altura do menu fixo, para os links âncora) ---- */
+  --mm-altura-nav: 120px;
+
+  /* ---- Altura máxima da lista de contatos antes de rolar ---- */
+  --mm-altura-lista: 640px;
+
+  /* ---- Barras de rolagem ---- */
+  --mm-sb-largura: 10px;
+  --mm-sb-trilho: transparent;
+  --mm-sb-thumb: #b9c6dc;
+  --mm-sb-thumb-hover: #8da2c4;
+}
+
+/* =====================================================================
+   1. BARRAS DE ROLAGEM (página, janela de perfil, listas, tabelas...)
+   - Firefox e navegadores novos: scrollbar-width / scrollbar-color
+   - Chrome/Edge/Safari antigos: ::-webkit-scrollbar
+   ===================================================================== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--mm-sb-thumb) var(--mm-sb-trilho);
+}
+
+*::-webkit-scrollbar {
+  width: var(--mm-sb-largura);
+  height: var(--mm-sb-largura);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--mm-sb-trilho);
+  border-radius: var(--mm-raio-pill);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--mm-sb-thumb);
+  border: 2px solid transparent;
+  border-radius: var(--mm-raio-pill);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--mm-sb-thumb-hover);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* =====================================================================
+   2. ACABAMENTO GERAL
+   ===================================================================== */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: var(--mm-altura-nav);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+::selection {
+  background: var(--mm-cor-primaria-clara);
+  color: var(--mm-texto);
+}
+
+/* Foco visível para quem navega pelo teclado */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--mm-foco);
+  outline-offset: 2px;
+}
+
+/* Quando uma janela (perfil, cadastro, pagamento) está aberta, a página atrás não rola */
+body:has(.overlay.aberto),
+body:has(.overlay.ativo) {
+  overflow: hidden;
+}
+
+nav a {
+  transition: color var(--mm-transicao), border-color var(--mm-transicao);
+}
+
+/* Cartões do painel e da home: leve elevação ao passar o mouse */
+.cards > article,
+.card-func {
+  transition: transform var(--mm-transicao), box-shadow var(--mm-transicao);
+}
+.cards > article:hover,
+.card-func:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mm-sombra-md);
+}
+
+/* =====================================================================
+   3. CONTATOS (aba "Meus contatos" e "Adicionar contato")
+   ===================================================================== */
+.contatos-card {
+  border-radius: var(--mm-raio-lg);
+  box-shadow: var(--mm-sombra-md);
+  overflow: hidden;
+}
+
+.contatos-abas .aba {
+  cursor: pointer;
+  font-weight: 700;
+  transition: color var(--mm-transicao), background-color var(--mm-transicao), border-color var(--mm-transicao);
+}
+.contatos-abas .aba:hover {
+  background-color: var(--mm-superficie-2);
+}
+.contatos-abas .aba[aria-selected="true"] {
+  color: var(--mm-cor-primaria);
+}
+
+.contatos-painel {
+  padding: var(--mm-espaco-5);
+}
+
+.lista-contatos-completa {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mm-espaco-3);
+  max-height: var(--mm-altura-lista);  /* lista muito longa rola dentro do cartão */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: var(--mm-espaco-2);
+}
+
+/* Colunas fixas: nome/telefone | tipo | Remover (tudo alinhado) */
+.contato-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  justify-content: normal;
+  gap: var(--mm-espaco-4);
+  margin: 0;
+  padding: 14px 18px;
+  background: var(--mm-superficie);
+  border: 1px solid var(--mm-borda);
+  border-left: 4px solid var(--mm-cor-primaria);
+  border-radius: var(--mm-raio-md);
+  box-shadow: var(--mm-sombra-sm);
+  transition: box-shadow var(--mm-transicao), border-color var(--mm-transicao), transform var(--mm-transicao);
+}
+.contato-item:hover {
+  box-shadow: var(--mm-sombra-md);
+  transform: translateY(-1px);
+}
+
+.contato-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.contato-info strong {
+  font-size: 17px;
+  line-height: 1.3;
+  color: var(--mm-texto);
+  overflow-wrap: anywhere;
+}
+.contato-info span {
+  font-size: 14px;
+  color: var(--mm-texto-medio);
+  font-variant-numeric: tabular-nums;
+}
+
+.contato-tipo {
+  justify-self: end;
+  padding: 3px 12px;
+  border-radius: var(--mm-raio-pill);
+  background: var(--mm-cor-info-clara);
+  color: var(--mm-cor-info-escura);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.btn-remover-contato {
+  padding: 7px 16px;
+  border: 1.5px solid var(--mm-cor-perigo);
+  border-radius: var(--mm-raio-pill);
+  background: transparent;
+  color: var(--mm-cor-perigo);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--mm-transicao), color var(--mm-transicao);
+}
+.btn-remover-contato:hover:not(:disabled) {
+  background: var(--mm-cor-perigo);
+  color: #fff;
+}
+.btn-remover-contato:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.mensagem-vazio {
+  padding: var(--mm-espaco-5);
+  text-align: center;
+  color: var(--mm-texto-suave);
+  background: var(--mm-superficie);
+  border: 1px dashed var(--mm-borda-forte);
+  border-radius: var(--mm-raio-md);
+}
+
+/* Formulário "Adicionar contato" */
+#formNovoContato .campo {
+  margin-bottom: var(--mm-espaco-4);
+}
+#formNovoContato .btn-salvar {
+  padding: 12px 22px;
+  border: 0;
+  border-radius: var(--mm-raio-sm);
+  background: var(--mm-cor-primaria);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--mm-transicao);
+}
+#formNovoContato .btn-salvar:hover:not(:disabled) {
+  background: var(--mm-cor-primaria-hover);
+}
+#formNovoContato .btn-salvar:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@media (max-width: 600px) {
+  .contatos-painel { padding: var(--mm-espaco-3); }
+  .contato-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--mm-espaco-2);
+  }
+  .contato-tipo { grid-column: 1; grid-row: 2; justify-self: start; }
+  .btn-remover-contato { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+}
+
+/* =====================================================================
+   4. JANELA "MEU PERFIL" (e demais janelas com .overlay-caixa)
+   ===================================================================== */
+.overlay-caixa {
+  max-height: min(90vh, 900px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border-radius: var(--mm-raio-lg);
+  box-shadow: var(--mm-sombra-lg);
+}
+
+.overlay-caixa h2 {
+  color: var(--mm-texto);
+}
+
+.overlay-caixa .overlay-fechar {
+  transition: background-color var(--mm-transicao), color var(--mm-transicao);
+}
+.overlay-caixa .overlay-fechar:hover {
+  background-color: var(--mm-superficie-2);
+  color: var(--mm-cor-perigo);
+}
+
+.overlay-caixa .perfil-foto img {
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid var(--mm-cor-primaria-clara);
+  box-shadow: var(--mm-sombra-sm);
+}
+.overlay-caixa .perfil-foto-label {
+  cursor: pointer;
+  color: var(--mm-cor-primaria);
+  font-weight: 600;
+  transition: color var(--mm-transicao);
+}
+.overlay-caixa .perfil-foto-label:hover {
+  color: var(--mm-cor-primaria-hover);
+}
+
+.overlay-caixa .campo label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--mm-texto);
+}
+.overlay-caixa .campo input,
+.overlay-caixa .campo select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--mm-borda-forte);
+  border-radius: var(--mm-raio-sm);
+  background: var(--mm-superficie);
+  color: var(--mm-texto);
+  font: inherit;
+  transition: border-color var(--mm-transicao), box-shadow var(--mm-transicao);
+}
+.overlay-caixa .campo input:focus,
+.overlay-caixa .campo select:focus {
+  outline: none;
+  border-color: var(--mm-cor-primaria);
+  box-shadow: 0 0 0 3px var(--mm-foco);
+}
+.overlay-caixa .campo input[readonly],
+.overlay-caixa .campo select:disabled {
+  cursor: not-allowed;
+  color: var(--mm-texto-suave);
+}
+.overlay-caixa .campo .erro {
+  color: var(--mm-cor-perigo-escura);
+  font-size: 13px;
+}
+.overlay-caixa .campo-invalido input,
+.overlay-caixa .campo-invalido select {
+  border-color: var(--mm-cor-perigo);
+}
+.overlay-caixa .campo-plano small {
+  color: var(--mm-texto-suave);
+}
+
+.overlay-caixa .perfil-botoes {
+  display: flex;
+  gap: var(--mm-espaco-3);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.overlay-caixa .btn-salvar,
+.overlay-caixa .btn-cancelar,
+.overlay-caixa .btn-sair {
+  padding: 11px 20px;
+  border-radius: var(--mm-raio-sm);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--mm-transicao), color var(--mm-transicao), border-color var(--mm-transicao);
+}
+.overlay-caixa .btn-salvar {
+  border: 0;
+  background: var(--mm-cor-primaria);
+  color: #fff;
+}
+.overlay-caixa .btn-salvar:hover:not(:disabled) {
+  background: var(--mm-cor-primaria-hover);
+}
+.overlay-caixa .btn-salvar:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.overlay-caixa .btn-cancelar {
+  border: 1.5px solid var(--mm-borda-forte);
+  background: var(--mm-superficie);
+  color: var(--mm-texto-medio);
+}
+.overlay-caixa .btn-cancelar:hover {
+  background: var(--mm-superficie-2);
+}
+.overlay-caixa .btn-sair {
+  border: 1.5px solid var(--mm-cor-perigo);
+  background: transparent;
+  color: var(--mm-cor-perigo);
+}
+.overlay-caixa .btn-sair:hover {
+  background: var(--mm-cor-perigo);
+  color: #fff;
+}
+
+.mensagem-status.sucesso { color: var(--mm-cor-sucesso-escura); }
+.mensagem-status.erro,
+.mensagem-status.erro-geral { color: var(--mm-cor-perigo-escura); }
