@@ -61,7 +61,7 @@
         },
         cuidado: {
             chave: 'cuidado', nome: 'Cuidado+',
-            raios: [2, 5, 10], raioPadrao: 10, maxResultados: 25,
+            raios: [2, 5, 10], raioPadrao: 10, maxResultados: 50,
             categorias: ['hospital', 'posto'], filtro24h: true, sos: true, suporte: false,
             beneficios: [
                 'Raio de até 10 km e até 25 resultados',
@@ -71,7 +71,7 @@
         },
         total: {
             chave: 'total', nome: 'Cuidado Total',
-            raios: [2, 5, 10, 20], raioPadrao: 10, maxResultados: 50,
+            raios: [2, 5, 10, 20], raioPadrao: 10, maxResultados: 500,
             categorias: ['hospital', 'posto', 'farmacia'], filtro24h: true, sos: true, suporte: true,
             beneficios: [
                 'Raio de até 20 km e até 50 resultados',
