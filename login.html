@@ -8,45 +8,6 @@
     <title>Login Medica+</title>
     <link rel="stylesheet" href="confirmar.css">
     <style>
-
-        #overlay-redefinir .form-redefinir button {
-        display: block;
-        width: 100%;
-        box-sizing: border-box;
-        margin: 12px 0 0;
-        padding: 12px 16px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 15px;
-        cursor: pointer;
-                        }
-
-/* "Salvar nova senha": afastado dos campos */
-        #overlay-redefinir .form-redefinir .btn-enviar {
-        margin-top: 20px;
-        }
-
-/* "Enviar um novo código": botão secundário, com contorno */
-        #overlay-redefinir #reenviar-redefinir {
-            color: #374151;
-            background: #ffffff;
-            border: 1.5px solid #c5cedd;
-        }
-        #overlay-redefinir #reenviar-redefinir:hover {
-        background: #f4f7fc;
-        }
-
-        /* "Cancelar": discreto, sem caixa */
-        #overlay-redefinir #cancelar-redefinir {
-        color: #6b7280;
-        background: transparent;
-        font-weight: 500;
-        border: 0;
-        }
-        #overlay-redefinir #cancelar-redefinir:hover {
-        color: #1f2937;
-        text-decoration: underline;
-        }
         /* Tela "Crie uma nova senha" (esqueci minha senha) */
         #overlay-redefinir label { display: block; margin: 12px 0 4px; text-align: left; font-size: 14px; }
         #overlay-redefinir input[type="password"] {
@@ -55,14 +16,44 @@
         }
         #overlay-redefinir .form-redefinir { margin-top: 8px; }
 
-        /* Logo clicável */
-        .logo-link {
-            text-decoration: none;
-            display: inline-block;
-            cursor: pointer;
+        /* Botões da tela "Crie uma nova senha" */
+        #overlay-redefinir .form-redefinir button {
+          display: block;
+          width: 100%;
+          box-sizing: border-box;
+          margin: 12px 0 0;
+          padding: 12px 16px;
+          border-radius: 8px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
         }
-        .logo-link:hover {
-            opacity: 0.9;
+
+        /* "Salvar nova senha": afastado dos campos */
+        #overlay-redefinir .form-redefinir .btn-enviar {
+          margin-top: 20px;
+        }
+
+        /* "Enviar um novo código": botão secundário, com contorno */
+        #overlay-redefinir #reenviar-redefinir {
+          background: #ffffff;
+          color: #374151;
+          border: 1.5px solid #c5cedd;
+        }
+        #overlay-redefinir #reenviar-redefinir:hover {
+          background: #f4f7fc;
+        }
+
+        /* "Cancelar": discreto, sem caixa */
+        #overlay-redefinir #cancelar-redefinir {
+          background: transparent;
+          color: #6b7280;
+          border: 0;
+          font-weight: 500;
+        }
+        #overlay-redefinir #cancelar-redefinir:hover {
+          color: #1f2937;
+          text-decoration: underline;
         }
     </style>
 </head>
@@ -73,9 +64,7 @@
         <a class="X" href="index.html" aria-label="Voltar para a home">×</a>
 
         <section class="login-card">
-            <a href="index.html" class="logo-link" aria-label="Voltar para a página inicial">
-                <img src="img/img-login.png" alt="Logo Medica+">
-            </a>
+            <img src="img/img-login.png" alt="Logo Medica+">
 
             <h1>Bem-vindo(a) de volta</h1>
             <p class="login-subtitulo">Entre na sua conta para acompanhar sua saúde.</p>
@@ -248,6 +237,7 @@
 
     <script src="api.js"></script>
     <script src="script.js"></script>
+    <script src="senha.js"></script>
 
 </body>
 
